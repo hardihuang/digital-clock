@@ -8,7 +8,7 @@ int pinCS = 10; // Attach CS to this pin, DIN to MOSI and CLK to SCK (cf http://
 int numberOfHorizontalDisplays = 4;
 int numberOfVerticalDisplays = 1;
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
-
+int timer;
 namespace {
 const int kCePin   = 8;  //RST
 const int kIoPin   = 6;  //DAT
@@ -40,6 +40,7 @@ void setup() {
   //setTime(); 
   lcd.begin(16, 2);
   Serial.begin(9600);  
+  //setTime();
 }
 
 void loop() {
@@ -122,6 +123,6 @@ void setTime()
 {
   rtc.writeProtect(false);
   rtc.halt(false);
-  Time t(2015, 2, 26, 13, 35, 50, Time::kThursday); //Change this line to set time  ex 2015 26/2 9:09:50
+  Time t(2018, 9, 27, 20, 0, 0, 3); //Change this line to set time  ex 2015 26/2 9:09:50
   rtc.time(t);
 }

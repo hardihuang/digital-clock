@@ -39,7 +39,7 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 
-int timeData[7] = {2000,1,1,0,0,0,1}; //year,month,date,hour,minute,second,day
+int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
 int state = 0; //0==display mode; 1==set time mode; 2==set alarm mode;
 int selected = 0; //which one we are editing right now,same order with timeData
 int debounce[3];
@@ -58,7 +58,7 @@ void setup() {
 }
 
 void loop() {
-  //Serial.println(state);
+ // Serial.println(state);
   //Serial.println(selected);
   getKey();
   //Serial.println(key);

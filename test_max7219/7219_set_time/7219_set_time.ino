@@ -9,9 +9,9 @@ BUTTON CONNECTIONS:
 RTC 1302 CLOCK CONNECTIONS:
  * DAT ->D6
  * CLK ->D7
- * RST ->D8
+ * RST ->D8tr
 */
-
+#include <stdio.h>
 #include <DS1302.h>
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -20,7 +20,6 @@ int pinCS = 10; // Attach CS to this pin, DIN to MOSI and CLK to SCK (cf http://
 int numberOfHorizontalDisplays = 4;
 int numberOfVerticalDisplays = 1;
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
-int timer;
 
 namespace {
   const int kCePin   = 8;  //RST
@@ -33,82 +32,91 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 
-int timeData[7] = {2000,1,1,0,0,0,1}; //year,month,date,hour,minute,second,day
+int timeData[7] = {2018,9,27,22,13,5,3}; //year,month,date,hour,minute,second,day
 int state = 0; //0==display mode; 1==set time mode; 2==set alarm mode;
 int selected = 0; //which one we are editing right now,same order with timeData
 int debounce[3];
-String key="0";
+int keyArr[3] = {3,4,5};//left, right, set
+char key='0';
 char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
+unsigned long gtimer = millis();
+unsigned long sectimer = millis();
+
 
 void setup() {
-  matrix.setIntensity(1);
+  matrix.setIntensity(5);
   matrix.setRotation(0, 1);
   matrix.setRotation(1, 1);
   matrix.setRotation(2, 1);
   matrix.setRotation(3, 1);
   
-  pinMode(9, INPUT);
-  pinMode(13, INPUT);
-  pinMode(10, INPUT);
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
   Serial.begin(9600); 
-  rtc.writeProtect(false);
-  rtc.halt(false);
 }
 
+
 void loop() {
-  //Serial.println(state);
-  //Serial.println(selected);
-  getKey();
-  //Serial.println(key);
-  
+  Serial.print("state: ");
+  Serial.println(state);
+  Serial.print("selected: ");
+  Serial.println(selected);
+  //getKey();
+  Serial.print("key: ");
+  Serial.println(key);
+  Serial.println("");
   if(state == 0){
-    getTime();
+    if(millis()-gtimer>5000){
+      Serial.println("sync real time");
+      getTime();
+      gtimer = millis();
+    }else if(millis()-sectimer >= 1000){
+      Serial.println("fake time + 1");
+      timeData[5]++;
+      sectimer = millis();
+    }
     drawDisplay();
-    if(key == "S"){
+    if(key == 'S'){
       state = 1;
       selected = 0;
       editTimer = millis();
-      btnSet = 0;
-      key = "0";
+      key = '0';
     }
-  }
-  if(state == 1 and key!= "0"){
-    if(key == "R"){
+  }else if(state == 1 and key!='0'){
+    Serial.println("state 1");
+    if(key == 'R'){
       editTimer = millis();
       addOne();
-      key = "0";
-    }else if(key == "L"){
+    }else if(key == 'L'){
       editTimer = millis();
       minusOne();  
-      key = "0";
-    }else if(key == "S"){
-      key = "0";
+    }else if(key == 'S'){
       editTimer = millis();
       if(selected<6){
         selected++;
       }else{
         selected = 0;
         state = 0;
-        updateTimeData();
+        updateTime();
       }
     }
+    key = '0';
   }
   if(state != 0 and millis() - editTimer > 15000){
     state = 0;  
     selected = 0;
   }
-  delay(50);
+  delay(100);
   
 }
-
 void getKey(){
-  int keyArray[] = {4,3,2};//left, right, set
-  for(int i = 0; i < 3; i++){
-    if(digitalRead(keyArray[i]) == 1){
+  for(int i = 0; i < 3; i++){ 
+    if(digitalRead(keyArr[i]) == 1){
       if(debounce[i] == 0){
         key = hexaKeys[i];
-        debounce[i] = 10;  
+        debounce[i] = 2;  
       }else{
         debounce[i] -= 1;  
       }
@@ -119,64 +127,85 @@ void getKey(){
 }
 
 void getTime(){
-  Time t = rtc.time();
-  timeData[0] = t.yr;
-  timeData[1] = t.mon;
-  timeData[2] = t.date;
-  timeData[3] = t.hr;
-  timeData[4] = t.min;
-  timeData[5] = t.sec;
-  timeData[6] = t.day;
+  
+  Time tIn = rtc.time();
+  
+  timeData[0] = tIn.yr;
+  timeData[1] = tIn.mon;
+  timeData[2] = tIn.date;
+  timeData[3] = tIn.hr;
+  timeData[4] = tIn.min;
+  timeData[5] = tIn.sec;
+  timeData[6] = tIn.day;
+  
+  for(int i=0;i<7;i++){
+    Serial.println(timeData[i]);
+  }
 }
 
 void drawDisplay(){
-  char tempHrOne = timeData[3]%10;
-  char tempHrTen = (timeData[3]/10)%10;
-  char tempMinOne = timeData[4]%10;
-  char tempMinTen = (timeData[4]/10)%10;
-  
-  //formate the single digit data
-  //if(timeData[1]<10){tempMon = "0"+tempMon;}
-  //if(timeData[2]<10){tempDate = "0"+tempDate;}
-  //if(timeData[3]<10){tempHr = "0"+tempHr;}
-  //if(timeData[4]<10){tempMin = "0"+tempMin;}
-  //if(timeData[5]<10){tempSec = "0"+tempSec;}
-  //String fullDate = " "+tempYr+" "+tempMon+"/"+tempDate+" "+tempDay;
-  //String fullTime = "    "+tempHr+":"+tempMin+":"+tempSec+"    ";
+  String tempStr;
+  char tempHr[2];
+  char tempMin[2];
+  char tempSec[2];
 
-  //Serial.println(tempYr+" "+tempMon+"/"+tempDate+" "+tempHr+" "+tempMin+" "+tempSec+" "+tempDay);
-  
-  matrix.fillScreen(LOW);
-  matrix.drawChar(1, 0, tempHrTen, HIGH, LOW, 1);
-  matrix.drawChar(8, 0, tempHrOne, HIGH, LOW, 1);
-  if(timer){
-    matrix.drawPixel(15,1,HIGH);
-    matrix.drawPixel(15,2,HIGH);
-    matrix.drawPixel(16,1,HIGH);
-    matrix.drawPixel(16,2,HIGH);
-    matrix.drawPixel(15,5,HIGH);
-    matrix.drawPixel(15,6,HIGH);
-    matrix.drawPixel(16,5,HIGH);
-    matrix.drawPixel(16,6,HIGH);
-    timer = 0;
-  }else{
-    matrix.drawPixel(15,1,LOW);
-    matrix.drawPixel(15,2,LOW);
-    matrix.drawPixel(16,1,LOW);
-    matrix.drawPixel(16,2,LOW);
-    matrix.drawPixel(15,5,LOW);
-    matrix.drawPixel(15,6,LOW);
-    matrix.drawPixel(16,5,LOW);
-    matrix.drawPixel(16,6,LOW);
-    timer = 1;
+  tempStr="";
+  tempStr = String(timeData[4]);
+  if(timeData[4]<10){
+    tempStr="0"+tempStr;
   }
-  matrix.drawChar(19, 0, tempMinTen, HIGH, LOW, 1);
-  matrix.drawChar(26, 0, tempMinOne, HIGH, LOW, 1);
+  tempStr.toCharArray(tempMin,3);
+  tempStr="";
+  
+  tempStr = String(timeData[3]);  
+  if(timeData[3]<10){
+    tempStr="0"+tempStr;
+  }
+  tempStr.toCharArray(tempHr,3);
+  tempStr="";
+  
+  tempStr = String(timeData[5]); 
+  if(timeData[5]<10){
+    tempStr="0"+tempStr;
+  }
+  tempStr.toCharArray(tempSec,3);
+  tempStr="";
+/*
+  Serial.println(timeData[0]);
+  Serial.println(timeData[1]);
+  Serial.println(timeData[2]);
+  Serial.println(timeData[3]);
+  Serial.println(tempHr[0]);
+  Serial.println(tempHr[1]);
+  Serial.println(timeData[4]);
+  Serial.println(tempMin[0]);
+  Serial.println(tempMin[1]);
+  Serial.println(timeData[5]);
+  Serial.println(tempSec[0]);
+  Serial.println(tempSec[1]);
+  Serial.println(timeData[6]);
+  */
+  matrix.fillScreen(LOW);
+  //hours
+  matrix.drawChar(1, 0, tempMin[0],HIGH,LOW, 1);
+  matrix.drawChar(8, 0, tempMin[1],HIGH,LOW, 1);
+  //dots
+  matrix.drawPixel(15,1,HIGH);
+  matrix.drawPixel(15,2,HIGH);
+  matrix.drawPixel(16,1,HIGH);
+  matrix.drawPixel(16,2,HIGH);
+  matrix.drawPixel(15,5,HIGH);
+  matrix.drawPixel(15,6,HIGH);
+  matrix.drawPixel(16,5,HIGH);
+  matrix.drawPixel(16,6,HIGH);
+  //minutes
+  matrix.drawChar(19, 0, tempSec[0], HIGH, LOW, 1);
+  matrix.drawChar(26, 0, tempSec[1], HIGH, LOW, 1);
   matrix.write();
 }
 
 void addOne(){
-  //Serial.println("added One");
+  Serial.println("added One");
   int upperLimit=0;
   int lowerLimit=0;
   switch(selected){
@@ -197,7 +226,7 @@ void addOne(){
 }
 
 void minusOne(){
-  //Serial.println("minused One");
+  Serial.println("minused One");
   int lowerLimit=0;
   int upperLimit=0;
   switch(selected){
@@ -217,11 +246,12 @@ void minusOne(){
   drawDisplay();
 }
 
-void updateTimeData(){
+void updateTime(){
+  rtc.writeProtect(false);
+  rtc.halt(false);
   //Serial.println("updated");
   //Time t(2013, 9, 22, 01, 38, 50, Time::kTuesday);
-  Time t(timeData[0], timeData[1], timeData[2], timeData[3], timeData[4], timeData[5],  timeData[6]);
-  rtc.time(t);
+  Time tOut(timeData[0], timeData[1], timeData[2], timeData[3], timeData[4], timeData[5],  timeData[6]);
+  rtc.time(tOut);
 }
-
 
