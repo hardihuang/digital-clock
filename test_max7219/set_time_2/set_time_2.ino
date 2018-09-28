@@ -29,6 +29,8 @@ int debounce[3];
 String key="0";
 char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
+unsigned long dotTimer = millis();
+bool dotFlag = 0;
 
 void setup() {
   pinMode(3, INPUT);
@@ -38,7 +40,7 @@ void setup() {
   rtc.writeProtect(false);
   rtc.halt(false);
   
-  matrix.setIntensity(5);
+  matrix.setIntensity(1);
   matrix.setRotation(0, 1);
   matrix.setRotation(1, 1);
   matrix.setRotation(2, 1);
@@ -47,18 +49,21 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("get in the loop!");
-  Serial.println(state);
-  Serial.println(selected);
   getKey();
+  /*
+  Serial.print("state: ");
+  Serial.println(state);
+  Serial.print("selected: ");
+  Serial.println(selected);
+  Serial.print("key: ");
   Serial.println(key);
-  
+  */
   if(state == 0){
     getTime();
     drawDisplay();
     if(key == "S"){
       state = 1;
-      selected = 0;
+      selected = 3;
       editTimer = millis();
       btnSet = 0;
       key = "0";
@@ -76,11 +81,12 @@ void loop() {
     }else if(key == "S"){
       key = "0";
       editTimer = millis();
-      if(selected<6){
+      if(selected<4){
         selected++;
       }else{
         selected = 0;
         state = 0;
+        timeData[5]=0;//reset second
         updateTimeData();
       }
     }
@@ -89,7 +95,7 @@ void loop() {
     state = 0;  
     selected = 0;
   }
-  delay(100);
+  delay(500);
   
 }
 
@@ -99,7 +105,7 @@ void getKey(){
     if(digitalRead(keyArray[i]) == 1){
       if(debounce[i] == 0){
         key = hexaKeys[i];
-        debounce[i] = 10;  
+        debounce[i] = 1;  
       }else{
         debounce[i] -= 1;  
       }
@@ -118,41 +124,74 @@ void getTime(){
   timeData[4] = t.min;
   timeData[5] = t.sec;
   timeData[6] = t.day;
+  /*
+  for(int i=0;i<7;i++){
+    Serial.print(timeData[i]);
+    Serial.print(" ");
+  }
+  Serial.println("");
+  */
 }
 
 void drawDisplay(){
-  String tempYr = String(timeData[0]);
-  String tempMon = String(timeData[1]);
-  String tempDate = String(timeData[2]);
-  String tempHr = String(timeData[3]);
-  String tempMin = String(timeData[4]);
-  String tempSec = String(timeData[5]);
-  String tempDay = String(timeData[6]);
-  
+  String strHr = String(timeData[3]); 
+  if(timeData[3]<10){
+    strHr="0"+strHr;
+  }
 
-  switch (timeData[6]) {
-    case 1: tempDay = "Sun"; break;
-    case 2: tempDay = "Mon"; break;
-    case 3: tempDay = "Tue"; break;
-    case 4: tempDay = "Wed"; break;
-    case 5: tempDay = "Thu"; break;
-    case 6: tempDay = "Fri"; break;
-    case 7: tempDay = "Sat"; break;
-    default: tempDay = "unknown";
+  String strMin = String(timeData[4]);
+  if(timeData[4]<10){
+    strMin="0"+strMin;
+  }
+
+  String strSec = String(timeData[5]); 
+  if(timeData[5]<10){
+    strSec="0"+strSec;
+  }
+  /*
+  Serial.println(timeData[3]);
+  Serial.println(strHr.charAt(0));
+  Serial.println(strHr.charAt(1));
+  Serial.println(timeData[4]);
+  Serial.println(strMin.charAt(0));
+  Serial.println(strMin.charAt(1));
+  Serial.println(timeData[5]);
+  Serial.println(strSec.charAt(0));
+  Serial.println(strSec.charAt(1));
+  */
+  matrix.fillScreen(LOW);
+  //hours
+  matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
+  matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
+
+  //dots
+  if(dotFlag == 0 and state == 0){//dot on
+    matrix.drawPixel(15,1,HIGH);
+    matrix.drawPixel(15,2,HIGH);
+    matrix.drawPixel(16,1,HIGH);
+    matrix.drawPixel(16,2,HIGH);
+    matrix.drawPixel(15,5,HIGH);
+    matrix.drawPixel(15,6,HIGH);
+    matrix.drawPixel(16,5,HIGH);
+    matrix.drawPixel(16,6,HIGH);
+    dotFlag = 1;
+  }else{ //dot off
+    matrix.drawPixel(15,1,0);
+    matrix.drawPixel(15,2,0);
+    matrix.drawPixel(16,1,0);
+    matrix.drawPixel(16,2,0);
+    matrix.drawPixel(15,5,0);
+    matrix.drawPixel(15,6,0);
+    matrix.drawPixel(16,5,0);
+    matrix.drawPixel(16,6,0);
+    dotFlag = 0;
   }
   
-  //formate the single digit data
-  if(timeData[1]<10){tempMon = "0"+tempMon;}
-  if(timeData[2]<10){tempDate = "0"+tempDate;}
-  if(timeData[3]<10){tempHr = "0"+tempHr;}
-  if(timeData[4]<10){tempMin = "0"+tempMin;}
-  if(timeData[5]<10){tempSec = "0"+tempSec;}
-  String fullDate = " "+tempYr+" "+tempMon+"/"+tempDate+" "+tempDay;
-  String fullTime = "    "+tempHr+":"+tempMin+":"+tempSec+"    ";
-  
-  //print to the screen
+  //minutes
+  matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
+  matrix.drawChar(26, 0, strMin.charAt(1), HIGH, LOW, 1);
+  matrix.write();
 
-  Serial.println(tempYr+" "+tempMon+"/"+tempDate+" "+tempHr+" "+tempMin+" "+tempSec+" "+tempDay);
 }
 
 void addOne(){
