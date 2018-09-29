@@ -57,8 +57,8 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int alarmData[3] = {8,30,0};//hour,minute,on or off
-int state = 0; //0==display mode; 1==menu; 2==set time; 3==set alarm;
+int alarmData[3] = {21,30,0};//hour,minute,on or off
+int state = 0; //0==display mode; 1==menu; 2==set time; 3==set alarm; 4==Pomodoro; 5==alarm goes off;
 int selectedTime = 3; //which one we are editing right now,same order with timeData
 int selectedAlarm = 0;
 int debounce[3];
@@ -67,6 +67,8 @@ char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
 bool dotState = 1;
+int buzzPin = 9;
+bool alarmCanceled;
 int photocellPin = 1;
 int photocellReading;
 int brightness;//1-15
@@ -75,6 +77,8 @@ void setup() {
   pinMode(3, INPUT);
   pinMode(4, INPUT);
   pinMode(5, INPUT);
+  pinMode(buzzPin, OUTPUT);
+  digitalWrite(buzzPin, LOW);
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
@@ -87,9 +91,8 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("selected time: ");
-  Serial.println(selectedTime);
   changeBrightness();
+  checkAlarm();
   getKey();
   if(state == 0){//display time mode
     if(key == "S"){//go to menu
@@ -136,7 +139,7 @@ void loop() {
       editTimer = millis();
     }else if(key == "S"){
       editTimer = millis();
-      if(selectedAlarm<4){
+      if(selectedAlarm<2){
         selectedAlarm++;  
       }else{
         selectedAlarm = 0;
@@ -144,6 +147,13 @@ void loop() {
         updateAlarmData();
       }
     }
+  }else if(state == 5){//alarm goes off
+    while(key != "S"){
+      getKey();
+      digitalWrite(buzzPin, HIGH); 
+    }
+    digitalWrite(buzzPin, LOW); 
+    alarmData[2] = 0;
   }
 
   if(state != 0 and millis() - editTimer > 15000){
@@ -152,6 +162,7 @@ void loop() {
   }
   
   drawDisplay();
+  
   key = "0";
   delay(100);
 }
@@ -242,8 +253,46 @@ void drawDisplay(){
         matrix.drawPixel(i,j,menuGraph[j][i]);  
       }
     } 
-  }else if(state == 3){
-
+  }else if(state == 3){//set alarm
+    String strHrAlarm = String(alarmData[0]); 
+    if(alarmData[0]<10){
+      strHrAlarm="0"+strHrAlarm;
+    }
+    String strMinAlarm = String(alarmData[1]);
+    if(alarmData[1]<10){
+      strMinAlarm="0"+strMinAlarm;
+    }
+  //draw hours
+    matrix.drawChar(1, 0, strHrAlarm.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHrAlarm.charAt(1),HIGH,LOW, 1);
+  //draw minutes
+    matrix.drawChar(19, 0, strMinAlarm.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMinAlarm.charAt(1), HIGH, LOW, 1);
+  //draw on off indicator
+    if(alarmData[2]==1){
+      matrix.drawPixel(31,7,1);
+    }else{
+      matrix.drawPixel(31,7,0);  
+    }
+  //draw dot arrow
+    if(selectedAlarm == 0){//left arrow edit hour
+      matrix.drawPixel(16,3,1);
+      matrix.drawPixel(16,5,1);
+      matrix.drawPixel(16,4,1);
+      matrix.drawPixel(15,4,1);
+    }else if(selectedAlarm == 1){//right arrow edit minute
+      matrix.drawPixel(15,3,1);
+      matrix.drawPixel(15,5,1);
+      matrix.drawPixel(15,4,1);
+      matrix.drawPixel(16,4,1);
+    }else if(selectedAlarm == 2){//down right arrow edit on off
+      matrix.drawPixel(15,5,1);
+      matrix.drawPixel(15,6,1);
+      matrix.drawPixel(15,7,1);
+      matrix.drawPixel(16,6,1);
+    }
+  }else if(state == 5){//alarm goes off
+    matrix.fillScreen(HIGH);
   }
   matrix.write();
 }
@@ -261,7 +310,7 @@ void addOneTime(){
     timeData[selectedTime] = lowerLimit;
   }
   drawDisplay();
-  Serial.println("add one time!");
+
 }
 
 void minusOneTime(){
@@ -277,19 +326,19 @@ void minusOneTime(){
     timeData[selectedTime] = upperLimit;
   }
   drawDisplay();
-  Serial.println("minus one time!");
 }
 
 void addOneAlarm(){
   int upperLimit=0;
   int lowerLimit=0;
   switch(selectedAlarm){
-    case 3:  upperLimit = 23; lowerLimit = 0;break; //hour
-    case 4:  upperLimit = 59; lowerLimit = 0;break; //minute
+    case 0:  upperLimit = 23; lowerLimit = 0;break; //hour
+    case 1:  upperLimit = 59; lowerLimit = 0;break; //minute
+    case 2:  upperLimit = 1; lowerLimit = 0;break; //on/off
   }
   if(alarmData[selectedAlarm] < upperLimit){
     alarmData[selectedAlarm]++;
-  }else if(timeData[selectedAlarm] == upperLimit){
+  }else if(alarmData[selectedAlarm] == upperLimit){
     alarmData[selectedAlarm] = lowerLimit;
   }
   drawDisplay();
@@ -299,8 +348,9 @@ void minusOneAlarm(){
   int lowerLimit=0;
   int upperLimit=0;
   switch(selectedAlarm){
-    case 3: upperLimit = 23;lowerLimit = 0;break; //hour
-    case 4: upperLimit = 59;lowerLimit = 0;break; //minute
+    case 0: upperLimit = 23;lowerLimit = 0;break; //hour
+    case 1: upperLimit = 59;lowerLimit = 0;break; //minute
+    case 2:  upperLimit = 1; lowerLimit = 0;break; //on/off
   }
   if(alarmData[selectedAlarm] > lowerLimit){
     alarmData[selectedAlarm]--;
@@ -327,3 +377,12 @@ void changeBrightness(){
   matrix.setIntensity(brightness);
 }
 
+void checkAlarm(){
+  if(timeData[3] == alarmData[0]){//hour match
+    if(timeData[4] == alarmData[1]){//minute match
+      if(alarmData[2]){
+        state = 5;  
+      }
+    }
+  }
+}
