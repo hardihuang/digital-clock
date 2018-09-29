@@ -30,7 +30,8 @@ String key="0";
 char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
-bool dotFlag = 0;
+bool dotState = 1;
+
 
 void setup() {
   pinMode(3, INPUT);
@@ -58,9 +59,9 @@ void loop() {
   Serial.print("key: ");
   Serial.println(key);
   */
+  
   if(state == 0){
     getTime();
-    drawDisplay();
     if(key == "S"){
       state = 1;
       selected = 3;
@@ -69,6 +70,9 @@ void loop() {
       key = "0";
     }
   }
+
+  drawDisplay();
+  
   if(state == 1 and key!= "0"){
     if(key == "R"){
       editTimer = millis();
@@ -95,8 +99,7 @@ void loop() {
     state = 0;  
     selected = 0;
   }
-  delay(500);
-  
+  delay(100);
 }
 
 void getKey(){
@@ -164,28 +167,43 @@ void drawDisplay(){
   matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
   matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
 
-  //dots
-  if(dotFlag == 0 and state == 0){//dot on
-    matrix.drawPixel(15,1,HIGH);
-    matrix.drawPixel(15,2,HIGH);
-    matrix.drawPixel(16,1,HIGH);
-    matrix.drawPixel(16,2,HIGH);
-    matrix.drawPixel(15,5,HIGH);
-    matrix.drawPixel(15,6,HIGH);
-    matrix.drawPixel(16,5,HIGH);
-    matrix.drawPixel(16,6,HIGH);
-    dotFlag = 1;
-  }else{ //dot off
-    matrix.drawPixel(15,1,0);
-    matrix.drawPixel(15,2,0);
-    matrix.drawPixel(16,1,0);
-    matrix.drawPixel(16,2,0);
-    matrix.drawPixel(15,5,0);
-    matrix.drawPixel(15,6,0);
-    matrix.drawPixel(16,5,0);
-    matrix.drawPixel(16,6,0);
-    dotFlag = 0;
+  if(millis()-dotTimer>=500  ){
+    if(dotState == 1){
+      dotState = 0;
+    }else if(dotState == 0 and state == 0){
+      dotState = 1;
+    }
+    dotTimer = millis();  
   }
+
+  //dots
+  if(state == 0){
+    Serial.println("normal dot");
+    matrix.drawPixel(15,1,dotState);
+    matrix.drawPixel(15,2,dotState);
+    matrix.drawPixel(16,1,dotState);
+    matrix.drawPixel(16,2,dotState);
+    matrix.drawPixel(15,5,dotState);
+    matrix.drawPixel(15,6,dotState);
+    matrix.drawPixel(16,5,dotState);
+    matrix.drawPixel(16,6,dotState);
+  }else if(state == 1){ 
+    Serial.println("edit dot");
+    if(selected == 3){
+      Serial.println("edit hour");
+      matrix.drawPixel(16,3,1);
+      matrix.drawPixel(16,5,1);
+      matrix.drawPixel(16,4,1);
+      matrix.drawPixel(15,4,1);
+    }else if(selected == 4){
+      Serial.println("edit minute");
+      matrix.drawPixel(15,3,1);
+      matrix.drawPixel(15,5,1);
+      matrix.drawPixel(15,4,1);
+      matrix.drawPixel(16,4,1);
+    }
+  }
+  
   
   //minutes
   matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
