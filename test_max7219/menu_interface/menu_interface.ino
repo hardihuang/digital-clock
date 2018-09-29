@@ -93,24 +93,31 @@ void loop() {
   getKey();
   if(state == 0){//display time mode
     if(key == "S"){//go to menu
-      state = 1;  
+      state = 1; 
+      editTimer = millis(); 
     }
     getTime();
   }else if(state == 1){{//menu mode
     if(key == "L"){//go to set time mode
       state = 2;
+      editTimer = millis();
     }else if(key == "R"){//go to set alarm mode
       state = 3;
+      editTimer = millis();
     }else if(key == "S"){//exit
       state = 0;  
+      editTimer = millis();
     }
   }
   }else if(state == 2){//set time mode
     if(key == "L"){
       minusOneTime();  
+      editTimer = millis();
     }else if(key == "R"){
       addOneTime();  
+      editTimer = millis();
     }else if(key == "S"){
+      editTimer = millis();
       if(selectedTime<4){
         selectedTime++;  
       }else{
@@ -123,9 +130,12 @@ void loop() {
   }else if(state == 3){//set alarm mode
     if(key == "L"){
       minusOneAlarm();  
+      editTimer = millis();
     }else if(key == "R"){
       addOneAlarm();  
+      editTimer = millis();
     }else if(key == "S"){
+      editTimer = millis();
       if(selectedAlarm<4){
         selectedAlarm++;  
       }else{
@@ -134,6 +144,11 @@ void loop() {
         updateAlarmData();
       }
     }
+  }
+
+  if(state != 0 and millis() - editTimer > 15000){
+    state = 0;  
+    selectedTime = 3;
   }
   
   drawDisplay();
