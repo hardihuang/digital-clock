@@ -116,7 +116,7 @@ void getKey(){
     if(digitalRead(keyArray[i]) == 1){
       if(debounce[i] == 0){
         key = hexaKeys[i];
-        debounce[i] = 1;  
+        debounce[i] = 3;  
       }else{
         debounce[i] -= 1;  
       }
