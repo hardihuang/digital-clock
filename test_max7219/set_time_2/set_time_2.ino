@@ -1,11 +1,26 @@
+/*
+max7219 matrix display CONNECTIONS:
+ *CLK -> 13
+ *CS -> 10
+ *DIN -> 11
+BUTTON CONNECTIONS:
+ *10k pull-up button
+ *btnLeft -> D5
+ *btnRight -> D3
+ *btnSet -> D4
+RTC 1302 CLOCK CONNECTIONS:
+ * DAT ->D6
+ * CLK ->D7
+ * RST ->D8
+*/
+
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Max72xxPanel.h>
-#include <LiquidCrystal.h>
 #include <stdio.h>
 #include <DS1302.h>
 
-int pinCS = 10; // Attach CS to this pin, DIN to MOSI and CLK to SCK (cf http://arduino.cc/en/Reference/SPI )
+int pinCS = 10;
 int numberOfHorizontalDisplays = 4;
 int numberOfVerticalDisplays = 1;
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
@@ -17,11 +32,9 @@ namespace {
   DS1302 rtc(kCePin, kIoPin, kSclkPin);
 }//namespace
 
-
 int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
-
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
 int state = 0; //0==display mode; 1==set time mode; 2==set alarm mode;
 int selected = 0; //which one we are editing right now,same order with timeData
@@ -40,7 +53,6 @@ void setup() {
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
-  
   matrix.setIntensity(1);
   matrix.setRotation(0, 1);
   matrix.setRotation(1, 1);
@@ -51,15 +63,6 @@ void setup() {
 
 void loop() {
   getKey();
-  /*
-  Serial.print("state: ");
-  Serial.println(state);
-  Serial.print("selected: ");
-  Serial.println(selected);
-  Serial.print("key: ");
-  Serial.println(key);
-  */
-  
   if(state == 0){
     getTime();
     if(key == "S"){
@@ -70,7 +73,6 @@ void loop() {
       key = "0";
     }
   }
-
   drawDisplay();
   
   if(state == 1 and key!= "0"){
@@ -127,13 +129,6 @@ void getTime(){
   timeData[4] = t.min;
   timeData[5] = t.sec;
   timeData[6] = t.day;
-  /*
-  for(int i=0;i<7;i++){
-    Serial.print(timeData[i]);
-    Serial.print(" ");
-  }
-  Serial.println("");
-  */
 }
 
 void drawDisplay(){
@@ -151,19 +146,9 @@ void drawDisplay(){
   if(timeData[5]<10){
     strSec="0"+strSec;
   }
-  /*
-  Serial.println(timeData[3]);
-  Serial.println(strHr.charAt(0));
-  Serial.println(strHr.charAt(1));
-  Serial.println(timeData[4]);
-  Serial.println(strMin.charAt(0));
-  Serial.println(strMin.charAt(1));
-  Serial.println(timeData[5]);
-  Serial.println(strSec.charAt(0));
-  Serial.println(strSec.charAt(1));
-  */
   matrix.fillScreen(LOW);
-  //hours
+  
+  //draw hours
   matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
   matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
 
@@ -175,10 +160,8 @@ void drawDisplay(){
     }
     dotTimer = millis();  
   }
-
-  //dots
-  if(state == 0){
-    Serial.println("normal dot");
+  // draw dots
+  if(state == 0){//normal double blinking dot
     matrix.drawPixel(15,1,dotState);
     matrix.drawPixel(15,2,dotState);
     matrix.drawPixel(16,1,dotState);
@@ -188,24 +171,19 @@ void drawDisplay(){
     matrix.drawPixel(16,5,dotState);
     matrix.drawPixel(16,6,dotState);
   }else if(state == 1){ 
-    Serial.println("edit dot");
-    if(selected == 3){
-      Serial.println("edit hour");
+    if(selected == 3){//left arrow edit hour
       matrix.drawPixel(16,3,1);
       matrix.drawPixel(16,5,1);
       matrix.drawPixel(16,4,1);
       matrix.drawPixel(15,4,1);
-    }else if(selected == 4){
-      Serial.println("edit minute");
+    }else if(selected == 4){//right arrow edit minute
       matrix.drawPixel(15,3,1);
       matrix.drawPixel(15,5,1);
       matrix.drawPixel(15,4,1);
       matrix.drawPixel(16,4,1);
     }
   }
-  
-  
-  //minutes
+  //draw minutes
   matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
   matrix.drawChar(26, 0, strMin.charAt(1), HIGH, LOW, 1);
   matrix.write();
@@ -213,7 +191,6 @@ void drawDisplay(){
 }
 
 void addOne(){
-  //Serial.println("added One");
   int upperLimit=0;
   int lowerLimit=0;
   switch(selected){
@@ -234,7 +211,6 @@ void addOne(){
 }
 
 void minusOne(){
-  //Serial.println("minused One");
   int lowerLimit=0;
   int upperLimit=0;
   switch(selected){
@@ -256,11 +232,7 @@ void minusOne(){
 }
 
 void updateTimeData(){
-  //Serial.println("updated");
   //Time t(2013, 9, 22, 01, 38, 50, Time::kTuesday);
   Time t(timeData[0], timeData[1], timeData[2], timeData[3], timeData[4], timeData[5],  timeData[6]);
   rtc.time(t);
 }
-
-
-
