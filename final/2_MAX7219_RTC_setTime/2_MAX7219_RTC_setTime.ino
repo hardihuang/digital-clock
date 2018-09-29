@@ -1,5 +1,5 @@
 /*
- *Digital Clock V0.1.0 
+ *Digital Clock V0.2.0 
  *by Hardi Huang - Sep 29 2018
 */
 
