@@ -173,6 +173,9 @@ void getKey(){
     if(digitalRead(keyArray[i]) == 1){
       if(debounce[i] == 0){
         key = hexaKeys[i];
+        digitalWrite(buzzPin, HIGH); 
+        delay(1);
+        digitalWrite(buzzPin, LOW); 
         debounce[i] = 3;  
       }else{
         debounce[i] -= 1;  
