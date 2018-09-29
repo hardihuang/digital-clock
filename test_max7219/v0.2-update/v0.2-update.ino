@@ -45,7 +45,7 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int state = 0; //0==display mode; 1==set time mode; 2==set alarm mode;
+int state = 0; //0==display mode; 1==set time mode; 2==set alarm mode; 3==action select
 int selected = 0; //which one we are editing right now,same order with timeData
 int debounce[3];
 String key="0";
@@ -252,7 +252,7 @@ void updateTimeData(){
 void changeBrightness(){
   photocellReading = analogRead(photocellPin);
   //Serial.println(photocellReading);
-  brightness = map(photocellReading,800,0,1,15);
+  brightness = map(photocellReading,800,0,5,15);
   //Serial.println(brightness);
   matrix.setIntensity(brightness);
 }
