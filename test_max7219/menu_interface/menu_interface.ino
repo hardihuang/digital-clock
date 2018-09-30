@@ -3,6 +3,7 @@
  *by Hardi Huang - Sep 29 2018
  *
  *update log:
+ *  sep/30/2018 11:35 added alarm function 
  *  sep/29/2018 13:13 added photocell change brightness function
 */
 
@@ -41,6 +42,16 @@ namespace {
   DS1302 rtc(kCePin, kIoPin, kSclkPin);
 }//namespace
 
+char alarmLogo[8][32] = {
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+};
 char menuGraph[8][32] =
 {
   {0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0},//1
@@ -57,7 +68,7 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int alarmData[3] = {21,30,0};//hour,minute,on or off
+int alarmData[3] = {10,10,0};//hour,minute,on or off
 int state = 0; //0==display mode; 1==menu; 2==set time; 3==set alarm; 4==Pomodoro; 5==alarm goes off;
 int selectedTime = 3; //which one we are editing right now,same order with timeData
 int selectedAlarm = 0;
@@ -72,8 +83,19 @@ bool alarmCanceled;
 int photocellPin = 1;
 int photocellReading;
 int brightness;//1-15
+unsigned long alarmBlinkTimer = millis();
+bool alarmState = 1;
 
 void setup() {
+  tone(buzzPin, 415, 500);
+  tone(buzzPin, 415, 500);
+  delay(500*1.3);
+  tone(buzzPin, 466, 500);
+  delay(500*1.3);
+  tone(buzzPin, 370, 1000);
+  delay(1000*1.3);
+  noTone(buzzPin);
+  
   pinMode(3, INPUT);
   pinMode(4, INPUT);
   pinMode(5, INPUT);
@@ -148,12 +170,14 @@ void loop() {
       }
     }
   }else if(state == 5){//alarm goes off
-    while(key != "S"){
-      getKey();
-      digitalWrite(buzzPin, HIGH); 
+    //BUZZ code in the drawDisplay 
+    editTimer = millis();
+    if(key == "S"){
+      noTone(buzzPin);
+      digitalWrite(buzzPin, LOW); 
+      alarmData[2] = 0; 
+      state = 0;
     }
-    digitalWrite(buzzPin, LOW); 
-    alarmData[2] = 0;
   }
 
   if(state != 0 and millis() - editTimer > 15000){
@@ -198,7 +222,10 @@ void getTime(){
 }
 
 void drawDisplay(){
-  matrix.fillScreen(LOW);
+  if(state != 5){
+    matrix.fillScreen(LOW);
+  }
+  
   if(state == 0 or state == 2){//display clock mode
     String strHrTime = String(timeData[3]); 
     if(timeData[3]<10){
@@ -295,7 +322,28 @@ void drawDisplay(){
       matrix.drawPixel(16,6,1);
     }
   }else if(state == 5){//alarm goes off
-    matrix.fillScreen(HIGH);
+    if(millis() - alarmBlinkTimer>=500){
+      if(alarmState==0){
+        tone(buzzPin, 415, 500);
+        for (int i = 0;i<32;i++){
+          for(int j=0;j<8;j++){
+            matrix.drawPixel(i,j,alarmLogo[j][i]);  
+          }
+        } 
+        alarmState = 1;
+        Serial.println("screen on");
+      }else if(alarmState==1){
+        noTone(buzzPin);
+        for (int i = 0;i<32;i++){
+          for(int j=0;j<8;j++){
+            matrix.drawPixel(i,j,!alarmLogo[j][i]);  
+          }
+        } 
+        alarmState = 0;
+        Serial.println("screen off");
+      }
+      alarmBlinkTimer = millis();
+    }   
   }
   matrix.write();
 }
@@ -377,13 +425,18 @@ void changeBrightness(){
   //Serial.println(photocellReading);
   brightness = map(photocellReading,800,0,5,15);
   //Serial.println(brightness);
-  matrix.setIntensity(brightness);
+  if(state != 5){
+    matrix.setIntensity(brightness); 
+  }else{
+    matrix.setIntensity(15);  //screen blink when alarm goes off, max brightness
+  }
+  
 }
 
 void checkAlarm(){
   if(timeData[3] == alarmData[0]){//hour match
     if(timeData[4] == alarmData[1]){//minute match
-      if(alarmData[2]){
+      if(alarmData[2] and state != 3){//do not go off if user is setting alarm
         state = 5;  
       }
     }
