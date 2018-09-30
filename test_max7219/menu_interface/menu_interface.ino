@@ -1,10 +1,10 @@
 /*
- *Digital Clock V0.2.1 
+ *Digital Clock V0.2.2 
  *by Hardi Huang - Sep 29 2018
  *
  *update log:
- *  sep/30/2018 11:35 added alarm function 
- *  sep/29/2018 13:13 added photocell change brightness function
+ *  V0.2.2 sep/30/2018 11:35 added alarm function 
+ *  V0.2.1 sep/29/2018 13:13 added photocell change brightness function
 */
 
 
