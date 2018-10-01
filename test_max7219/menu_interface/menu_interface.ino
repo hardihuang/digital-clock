@@ -22,6 +22,10 @@ RTC 1302 CLOCK CONNECTIONS:
  * DAT ->D6
  * CLK ->D7
  * RST ->D8
+Other
+ * buzzer -> 9
+ * photocell -> A1
+ * countDown sideBtn -> 12
 */
 
 #include <SPI.h>
@@ -41,6 +45,17 @@ namespace {
   const int kSclkPin = 7;  //CLK
   DS1302 rtc(kCePin, kIoPin, kSclkPin);
 }//namespace
+
+char timeArr[8][32] ={
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//1
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//2
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//3
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//4
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//5
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//6
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},//7
+  {1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0} //8
+};
 
 char alarmLogo[8][32] = {
   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -64,27 +79,32 @@ char menuGraph[8][32] =
   {0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0}//8
 };
 
-int btnLeft = 0;
-int btnRight = 0;
-int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
 int alarmData[3] = {10,10,0};//hour,minute,on or off
 int state = 0; //0==display mode; 1==menu; 2==set time; 3==set alarm; 4==Pomodoro; 5==alarm goes off;
 int selectedTime = 3; //which one we are editing right now,same order with timeData
 int selectedAlarm = 0;
 int debounce[3];
+int keyArray[] = {5,3,4};//left, right, set
 String key="0";
 char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
 bool dotState = 1;
+String strHrTime;
+String strMinTime;
 int buzzPin = 9;
+int sideBtn = 12;
 bool alarmCanceled;
 int photocellPin = 1;
 int photocellReading;
 int brightness;//1-15
 unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
+//countDown variables
+int countM = 0;
+int countN = 0;
+unsigned long countDownTimer = millis();
 
 void setup() {
   tone(buzzPin, 415, 500);
@@ -99,6 +119,7 @@ void setup() {
   pinMode(3, INPUT);
   pinMode(4, INPUT);
   pinMode(5, INPUT);
+  pinMode(sideBtn, INPUT);
   pinMode(buzzPin, OUTPUT);
   digitalWrite(buzzPin, LOW);
   Serial.begin(9600); 
@@ -113,9 +134,21 @@ void setup() {
 }
 
 void loop() {
+  
+  Serial.println(state);
   changeBrightness();
   checkAlarm();
   getKey();
+  if(digitalRead(sideBtn) == 1 and state != 4){
+    state = 4;
+  }else if(digitalRead(sideBtn) == 0 and state == 4){
+    state = 0;
+    countM=0;
+    countN=0;
+    resetTimeArr();
+    countDownTimer = millis();
+  }
+
   if(state == 0){//display time mode
     if(key == "S"){//go to menu
       state = 1; 
@@ -169,6 +202,11 @@ void loop() {
         updateAlarmData();
       }
     }
+  }else if(state == 4){
+    if(millis()-countDownTimer>=50){
+      countDownDisplay();
+      countDownTimer = millis();
+    }
   }else if(state == 5){//alarm goes off
     //BUZZ code in the drawDisplay 
     editTimer = millis();
@@ -180,7 +218,7 @@ void loop() {
     }
   }
 
-  if(state != 0 and millis() - editTimer > 15000){
+  if(state != 0  and state!=4 and millis() - editTimer > 15000){
     state = 0;  
     selectedTime = 3;
   }
@@ -192,7 +230,6 @@ void loop() {
 }
 
 void getKey(){
-  int keyArray[] = {5,3,4};//left, right, set
   for(int i = 0; i < 3; i++){
     if(digitalRead(keyArray[i]) == 1){
       if(debounce[i] == 0){
@@ -227,17 +264,14 @@ void drawDisplay(){
   }
   
   if(state == 0 or state == 2){//display clock mode
-    String strHrTime = String(timeData[3]); 
+    strHrTime = String(timeData[3]); 
     if(timeData[3]<10){
       strHrTime="0"+strHrTime;
     }
-    String strMinTime = String(timeData[4]);
+    Serial.println(strHrTime);
+    strMinTime = String(timeData[4]);
     if(timeData[4]<10){
       strMinTime="0"+strMinTime;
-    }
-    String strSecTime = String(timeData[5]); 
-    if(timeData[5]<10){
-      strSecTime="0"+strSecTime;
     }
   //draw hours
     matrix.drawChar(1, 0, strHrTime.charAt(0),HIGH,LOW, 1);
@@ -321,6 +355,12 @@ void drawDisplay(){
       matrix.drawPixel(15,7,1);
       matrix.drawPixel(16,6,1);
     }
+  }else if(state == 4){
+    for (int i = 0;i<32;i++){
+      for(int j=0;j<8;j++){
+        matrix.drawPixel(i,j,timeArr[j][i]);  
+      }
+    } 
   }else if(state == 5){//alarm goes off
     if(millis() - alarmBlinkTimer>=500){
       if(alarmState==0){
@@ -426,7 +466,8 @@ void changeBrightness(){
   brightness = map(photocellReading,800,0,5,15);
   //Serial.println(brightness);
   if(state != 5){
-    matrix.setIntensity(brightness); 
+    //matrix.setIntensity(brightness); 
+	matrix.setIntensity(1); 
   }else{
     matrix.setIntensity(15);  //screen blink when alarm goes off, max brightness
   }
@@ -439,6 +480,49 @@ void checkAlarm(){
       if(alarmData[2] and state != 3){//do not go off if user is setting alarm
         state = 5;  
       }
+    }
+  }
+}
+
+void resetTimeArr(){
+  for(int p = 0;p<32;p++){
+    for(int q=0;q<8;q++){
+      if(p<14){
+        timeArr[q][p] = 1;  
+      }else{
+        timeArr[q][p] = 0;  
+      }
+    }  
+  }
+}
+
+void countDownDisplay(){
+  timeArr[countN][13-countM] = 0;
+  timeArr[countN][17-countM] = 1;  
+  drawDisplay();
+  delay(5);
+  timeArr[countN][17-countM] = 0;
+  timeArr[countN][21-countM] = 1;  
+  drawDisplay();
+  delay(2);
+  timeArr[countN][21-countM] = 0;
+  timeArr[countN][26-countM] = 1;  
+  drawDisplay();
+  delay(2);
+  timeArr[countN][26-countM] = 0;
+  timeArr[countN][31-countM] = 1;  
+  drawDisplay();
+  //calculute the next frame data
+  if(countN<8){
+    countN++;  
+  }else{
+    countN = 0;
+    if(countM<13){
+      countM++;  
+    }else if(countM == 13){//finished the first loop
+      resetTimeArr();
+      countM=0;
+      countN=0;
     }
   }
 }
