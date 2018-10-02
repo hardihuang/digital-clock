@@ -14,7 +14,7 @@ max7219 matrix display CONNECTIONS:
  *CS -> 10
  *DIN -> 11
 BUTTON CONNECTIONS:
- *10k pull-up button
+ *arduino internel pull-up
  *btnLeft -> D5
  *btnRight -> D3
  *btnSet -> D4
@@ -95,10 +95,10 @@ void setup() {
   tone(buzzPin, 370, 1000);
   delay(1000*1.3);
   noTone(buzzPin);
-  
-  pinMode(3, INPUT);
-  pinMode(4, INPUT);
-  pinMode(5, INPUT);
+
+  pinMode(3,INPUT_PULLUP);
+  pinMode(4,INPUT_PULLUP);
+  pinMode(5,INPUT_PULLUP);
   pinMode(buzzPin, OUTPUT);
   digitalWrite(buzzPin, LOW);
   Serial.begin(9600); 
@@ -194,7 +194,7 @@ void loop() {
 void getKey(){
   int keyArray[] = {5,3,4};//left, right, set
   for(int i = 0; i < 3; i++){
-    if(digitalRead(keyArray[i]) == 1){
+    if(digitalRead(keyArray[i]) == 0){
       if(debounce[i] == 0){
         key = hexaKeys[i];
         digitalWrite(buzzPin, HIGH); 
@@ -423,7 +423,7 @@ void updateAlarmData(){
 void changeBrightness(){
   photocellReading = analogRead(photocellPin);
   //Serial.println(photocellReading);
-  brightness = map(photocellReading,800,0,5,15);
+  brightness = map(photocellReading,800,0,1,15);
   //Serial.println(brightness);
   if(state != 5){
     matrix.setIntensity(brightness); 
