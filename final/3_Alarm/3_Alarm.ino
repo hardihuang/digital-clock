@@ -3,6 +3,7 @@
  *by Hardi Huang
  *
  *update log:
+ *  V0.2.7 Oct/3/2018 20:29 added opening greeting hello message 
  *  V0.2.5 Oct/3/2018 20:01 added eeprom store alarm data function
  *  V0.2.4 Oct/3/2018 19:06 fixed alarm snooze function and bright flicking bug
  *  V0.2.2 sep/30/2018 11:35 added alarm function 
@@ -81,7 +82,7 @@ String key="0";
 char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
-bool dotState = 1;
+bool dotState = 0;
 int buzzPin = 9;
 bool alarmCanceled;
 int photocellPin = 1;
@@ -91,6 +92,16 @@ unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
 
 void setup() {
+  matrix.setIntensity(brightness);
+  matrix.setRotation(0, 1);
+  matrix.setRotation(1, 1);
+  matrix.setRotation(2, 1);
+  matrix.setRotation(3, 1);
+  matrix.fillScreen(LOW); // show black
+  matrix.setCursor(1, 1);
+  matrix.print("Hello");
+  matrix.write();
+  
   tone(buzzPin, 415, 500);
   tone(buzzPin, 415, 500);
   delay(500*1.3);
@@ -108,13 +119,12 @@ void setup() {
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
-  matrix.setIntensity(10);
-  matrix.setRotation(0, 1);
-  matrix.setRotation(1, 1);
-  matrix.setRotation(2, 1);
-  matrix.setRotation(3, 1);
 
   fetchAlarmData();
+  delay(500);
+  matrix.fillScreen(LOW); // show black
+  matrix.write();
+  delay(2000);
 }
 
 void loop() {
@@ -429,7 +439,7 @@ void updateAlarmData(){
 
 void changeBrightness(){
   photocellReading = analogRead(photocellPin);
-  int i = map(photocellReading,1023,0,1,15);
+  int i = map(photocellReading,1023,0,0,15);
   if(state != 5 and abs(brightness-i)>1){//use temp i to see if light has big change to prevent brightness flicking
     brightness = i;
     matrix.setIntensity(brightness); 
