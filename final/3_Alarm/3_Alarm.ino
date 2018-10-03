@@ -68,7 +68,8 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int alarmData[3] = {10,10,0};//hour,minute,on or off
+int alarmData[3] = {17,40,1};//hour,minute,on or off
+unsigned long snoozeTimer = millis();
 int state = 0; //0==display mode; 1==menu; 2==set time; 3==set alarm; 4==Pomodoro; 5==alarm goes off;
 int selectedTime = 3; //which one we are editing right now,same order with timeData
 int selectedAlarm = 0;
@@ -82,7 +83,7 @@ int buzzPin = 9;
 bool alarmCanceled;
 int photocellPin = 1;
 int photocellReading;
-int brightness;//1-15
+int brightness=1;//1-15
 unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
 
@@ -175,7 +176,7 @@ void loop() {
     if(key == "S"){
       noTone(buzzPin);
       digitalWrite(buzzPin, LOW); 
-      alarmData[2] = 0; 
+      snoozeTimer = millis();
       state = 0;
     }
   }
@@ -240,11 +241,11 @@ void drawDisplay(){
       strSecTime="0"+strSecTime;
     }
   //draw hours
-    matrix.drawChar(1, 0, strHrTime.charAt(0),HIGH,LOW, 1);
-    matrix.drawChar(8, 0, strHrTime.charAt(1),HIGH,LOW, 1);
+    matrix.drawChar(1, 1, strHrTime.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 1, strHrTime.charAt(1),HIGH,LOW, 1);
   //draw minutes
-    matrix.drawChar(19, 0, strMinTime.charAt(0), HIGH, LOW, 1);
-    matrix.drawChar(26, 0, strMinTime.charAt(1), HIGH, LOW, 1);
+    matrix.drawChar(19, 1, strMinTime.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 1, strMinTime.charAt(1), HIGH, LOW, 1);
   //draw dots
     if(millis()-dotTimer>=500  ){
       if(dotState == 1){
@@ -293,16 +294,16 @@ void drawDisplay(){
       strMinAlarm="0"+strMinAlarm;
     }
   //draw hours
-    matrix.drawChar(1, 0, strHrAlarm.charAt(0),HIGH,LOW, 1);
-    matrix.drawChar(8, 0, strHrAlarm.charAt(1),HIGH,LOW, 1);
+    matrix.drawChar(1, 1, strHrAlarm.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 1, strHrAlarm.charAt(1),HIGH,LOW, 1);
   //draw minutes
-    matrix.drawChar(19, 0, strMinAlarm.charAt(0), HIGH, LOW, 1);
-    matrix.drawChar(26, 0, strMinAlarm.charAt(1), HIGH, LOW, 1);
+    matrix.drawChar(19, 1, strMinAlarm.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 1, strMinAlarm.charAt(1), HIGH, LOW, 1);
   //draw on off indicator
     if(alarmData[2]==1){
-      matrix.drawPixel(31,7,1);
+      matrix.drawPixel(31,0,1);
     }else{
-      matrix.drawPixel(31,7,0);  
+      matrix.drawPixel(31,0,0);  
     }
   //draw dot arrow
     if(selectedAlarm == 0){//left arrow edit hour
@@ -316,31 +317,29 @@ void drawDisplay(){
       matrix.drawPixel(15,4,1);
       matrix.drawPixel(16,4,1);
     }else if(selectedAlarm == 2){//down right arrow edit on off
-      matrix.drawPixel(15,5,1);
-      matrix.drawPixel(15,6,1);
-      matrix.drawPixel(15,7,1);
-      matrix.drawPixel(16,6,1);
+      matrix.drawPixel(15,0,1);
+      matrix.drawPixel(15,1,1);
+      matrix.drawPixel(15,2,1);
+      matrix.drawPixel(16,1,1);
     }
   }else if(state == 5){//alarm goes off
     if(millis() - alarmBlinkTimer>=500){
       if(alarmState==0){
-        tone(buzzPin, 415, 500);
+        noTone(buzzPin);
         for (int i = 0;i<32;i++){
           for(int j=0;j<8;j++){
             matrix.drawPixel(i,j,alarmLogo[j][i]);  
           }
         } 
         alarmState = 1;
-        Serial.println("screen on");
       }else if(alarmState==1){
-        noTone(buzzPin);
+        tone(buzzPin, 415, 500);
         for (int i = 0;i<32;i++){
           for(int j=0;j<8;j++){
             matrix.drawPixel(i,j,!alarmLogo[j][i]);  
           }
         } 
         alarmState = 0;
-        Serial.println("screen off");
       }
       alarmBlinkTimer = millis();
     }   
@@ -422,23 +421,23 @@ void updateAlarmData(){
 
 void changeBrightness(){
   photocellReading = analogRead(photocellPin);
-  //Serial.println(photocellReading);
-  brightness = map(photocellReading,800,0,1,15);
-  //Serial.println(brightness);
-  if(state != 5){
+  int i = map(photocellReading,1023,0,1,15);
+  if(state != 5 and abs(brightness-i)>1){//use temp i to see if light has big change to prevent brightness flicking
+    brightness = i;
     matrix.setIntensity(brightness); 
-  }else{
+  }else if(state == 5){
     matrix.setIntensity(15);  //screen blink when alarm goes off, max brightness
   }
-  
 }
 
-void checkAlarm(){
+void checkAlarm(){  
   if(timeData[3] == alarmData[0]){//hour match
     if(timeData[4] == alarmData[1]){//minute match
-      if(alarmData[2] and state != 3){//do not go off if user is setting alarm
-        state = 5;  
+      if(alarmData[2] and state != 3 and millis()-snoozeTimer>60000){//do not go off if user is setting alarm  or user already snoozed the alarm
+        state = 5;
       }
+    }else if(timeData[4] != alarmData[1] and state == 5){
+      state = 0;  
     }
   }
 }
