@@ -3,6 +3,7 @@
  *by Hardi Huang - Sep 29 2018
  *
  *update log:
+ *  V0.2.4 Oct/3/2018 19:06 fixed alarm snooze function and bright flicking bug
  *  V0.2.2 sep/30/2018 11:35 added alarm function 
  *  V0.2.1 sep/29/2018 13:13 added photocell change brightness function
 */
@@ -177,6 +178,7 @@ void loop() {
       noTone(buzzPin);
       digitalWrite(buzzPin, LOW); 
       snoozeTimer = millis();
+      matrix.setIntensity(brightness); 
       state = 0;
     }
   }
