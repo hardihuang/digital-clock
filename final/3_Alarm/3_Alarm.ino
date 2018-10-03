@@ -3,6 +3,7 @@
  *by Hardi Huang - Sep 29 2018
  *
  *update log:
+ *  V0.2.5 Oct/3/2018 20:01 added eeprom store alarm data function
  *  V0.2.4 Oct/3/2018 19:06 fixed alarm snooze function and bright flicking bug
  *  V0.2.2 sep/30/2018 11:35 added alarm function 
  *  V0.2.1 sep/29/2018 13:13 added photocell change brightness function
@@ -30,6 +31,7 @@ RTC 1302 CLOCK CONNECTIONS:
 #include <Max72xxPanel.h>
 #include <stdio.h>
 #include <DS1302.h>
+#include <EEPROM.h>
 
 int pinCS = 10;
 int numberOfHorizontalDisplays = 4;
@@ -111,7 +113,8 @@ void setup() {
   matrix.setRotation(1, 1);
   matrix.setRotation(2, 1);
   matrix.setRotation(3, 1);
-  
+
+  fetchAlarmData();
 }
 
 void loop() {
@@ -158,9 +161,11 @@ void loop() {
     if(key == "L"){
       minusOneAlarm();  
       editTimer = millis();
+      writeAlarmData();
     }else if(key == "R"){
       addOneAlarm();  
       editTimer = millis();
+      writeAlarmData();
     }else if(key == "S"){
       editTimer = millis();
       if(selectedAlarm<2){
@@ -168,8 +173,9 @@ void loop() {
       }else{
         selectedAlarm = 0;
         state = 0;  
-        updateAlarmData();
+        
       }
+      writeAlarmData();
     }
   }else if(state == 5){//alarm goes off
     //BUZZ code in the drawDisplay 
@@ -443,3 +449,17 @@ void checkAlarm(){
     }
   }
 }
+
+void fetchAlarmData(){
+  for(int i=0;i<3;i++){
+    alarmData[i]= EEPROM.read(i);
+  }  
+}
+
+void writeAlarmData(){
+  for(int i=0;i<3;i++){
+    EEPROM.write(i, alarmData[i]);
+  }
+}
+
+
