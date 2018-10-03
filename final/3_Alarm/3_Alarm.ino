@@ -1,6 +1,6 @@
 /*
- *Digital Clock V0.2.2 
- *by Hardi Huang - Sep 29 2018
+ *Digital Clock V0.2.5 
+ *by Hardi Huang
  *
  *update log:
  *  V0.2.5 Oct/3/2018 20:01 added eeprom store alarm data function
