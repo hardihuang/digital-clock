@@ -3,7 +3,6 @@
  *by Hardi Huang
  *
  *update log:
- *  V0.2.8 Oct/4/2018 18:22 reduced the sram space, ready for adding more functions
  *  V0.2.7 Oct/3/2018 20:29 added opening greeting hello message 
  *  V0.2.5 Oct/3/2018 20:01 added eeprom store alarm data function
  *  V0.2.4 Oct/3/2018 19:06 fixed alarm snooze function and bright flicking bug
@@ -68,8 +67,16 @@ static const unsigned char PROGMEM bellBitmap[] =
   B11111111,
   B00011000
 };
-int buzzPin = 9;
-int photocellPin = 1;
+static const unsigned char PROGMEM volumeBitmap[] =
+{ B00010000,
+  B00110010,
+  B11110001,
+  B11110101,
+  B11110101,
+  B11110001,
+  B00110010,
+  B00010000
+};
 
 int btnLeft = 0;
 int btnRight = 0;
@@ -86,6 +93,8 @@ char hexaKeys[]={'L','R','S'};
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
 bool dotState = 0;
+int buzzPin = 9;
+int photocellPin = 1;
 int photocellReading;
 int brightness=1;//1-15
 unsigned long alarmBlinkTimer = millis();
@@ -103,7 +112,7 @@ void setup() {
   matrix.setCursor(1, 1);
   matrix.print("Hello");
   matrix.write();
-  
+
   tone(buzzPin, 415, 500);
   tone(buzzPin, 415, 500);
   delay(500*1.3);
@@ -214,6 +223,7 @@ void loop() {
   
   key = "0";
   delay(100);
+
 }
 
 void getKey(){
@@ -294,7 +304,9 @@ void drawDisplay(){
     }
   }else if(state == 1){
     matrix.drawBitmap(1, 0,  clockBitmap, 8, 8, 1);
-    matrix.drawBitmap(23, 0,  bellBitmap, 8, 8, 1);
+    matrix.drawBitmap(23, 0,  volumeBitmap, 8, 8, 1);
+    matrix.fillRect(11, 0, 10, 8, 1);
+    matrix.drawBitmap(12, 0,  bellBitmap, 8, 8, 0);
   }else if(state == 3){//set alarm
     String strHrAlarm = String(alarmData[0]); 
     if(alarmData[0]<10){
@@ -456,16 +468,20 @@ void writeAlarmData(){
 void scrollMessage(String msg) {
   msg += " "; // add a space at the end
   for ( int i = 0 ; i < width * msg.length() + matrix.width() - 1 - spacer; i++ ) {
+
     int letter = i / width;
     int x = (matrix.width() - 1) - i % width;
     int y = (matrix.height() - 8) / 2; // center the text vertically
+ 
     while ( x + width - spacer >= 0 && letter >= 0 ) {
       if ( letter < msg.length() ) {
         matrix.drawChar(x, y, msg[letter], HIGH, LOW, 1);
       }
+
       letter--;
       x -= width;
     }
+
     matrix.write(); // Send bitmap to display
     delay(20);
   }
