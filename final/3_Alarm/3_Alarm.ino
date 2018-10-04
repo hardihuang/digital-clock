@@ -90,6 +90,8 @@ int photocellReading;
 int brightness=1;//1-15
 unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
+int spacer = 1;  // dots between letters
+int width = 5 + spacer; // The font width is 5 pixels + spacer
 
 void setup() {
   matrix.setIntensity(brightness);
@@ -119,12 +121,16 @@ void setup() {
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
-
-  fetchAlarmData();
-  delay(500);
+  
   matrix.fillScreen(LOW); // show black
   matrix.write();
-  delay(2000);
+  delay(500);
+  
+  fetchAlarmData();
+  scrollMessage("Please Enjoy!");
+  matrix.fillScreen(LOW); // show black
+  matrix.write();
+  delay(1000);
 }
 
 void loop() {
@@ -472,4 +478,25 @@ void writeAlarmData(){
   }
 }
 
+void scrollMessage(String msg) {
+  msg += " "; // add a space at the end
+  for ( int i = 0 ; i < width * msg.length() + matrix.width() - 1 - spacer; i++ ) {
 
+    int letter = i / width;
+    int x = (matrix.width() - 1) - i % width;
+    int y = (matrix.height() - 8) / 2; // center the text vertically
+ 
+    while ( x + width - spacer >= 0 && letter >= 0 ) {
+      if ( letter < msg.length() ) {
+        matrix.drawChar(x, y, msg[letter], HIGH, LOW, 1);
+      }
+
+      letter--;
+      x -= width;
+    }
+
+    matrix.write(); // Send bitmap to display
+    delay(20);
+  }
+  matrix.setCursor(0,0);
+}
