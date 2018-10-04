@@ -46,7 +46,7 @@ namespace {
   DS1302 rtc(kCePin, kIoPin, kSclkPin);
 }//namespace
 
-static const unsigned char PROGMEM clockBitmap[] =
+static const unsigned char PROGMEM setClockBitmap[] =
 { B00111100,
   B01010010,
   B10010001,
@@ -57,7 +57,7 @@ static const unsigned char PROGMEM clockBitmap[] =
   B00111100 
 };
 
-static const unsigned char PROGMEM bellBitmap[] =
+static const unsigned char PROGMEM setAlarmBitmap[] =
 { B00011000,
   B00111100,
   B01100110,
@@ -66,6 +66,49 @@ static const unsigned char PROGMEM bellBitmap[] =
   B11000011,
   B11111111,
   B00011000
+};
+static const unsigned char PROGMEM countDownBitmap[] =
+{ B01111111,
+  B01100011,
+  B00110110,
+  B00010100,
+  B00010100,
+  B00110110,
+  B01100011,
+  B01111111
+};
+static const unsigned char PROGMEM stopWatchBitmap[] =
+{
+  B00011100,
+  B01001000,
+  B00111110,
+  B01000001,
+  B01001001,
+  B01001101,
+  B01000001,
+  B00111110
+};
+static const unsigned char PROGMEM diceBitmap[] =
+{
+  B00000000,
+  B01111100,
+  B10000010,
+  B10101010,
+  B10010010,
+  B10101010,
+  B10000010,
+  B01111100
+};
+static const unsigned char PROGMEM scoreBoardBitmap[] =
+{
+  B00000000,
+  B01000111,
+  B11000001,
+  B01010001,
+  B01000111,
+  B01010001,
+  B01000001,
+  B11100111
 };
 static const unsigned char PROGMEM volumeBitmap[] =
 { B00010000,
@@ -101,6 +144,7 @@ unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
 int spacer = 1;  // dots between letters
 int width = 5 + spacer; // The font width is 5 pixels + spacer
+int menuCurrentView = 0;
 
 void setup() {
   matrix.setIntensity(brightness);
@@ -109,19 +153,6 @@ void setup() {
   matrix.setRotation(2, 1);
   matrix.setRotation(3, 1);
   matrix.fillScreen(LOW); // show black
-  matrix.setCursor(1, 1);
-  matrix.print("Hello");
-  matrix.write();
-
-  tone(buzzPin, 415, 500);
-  tone(buzzPin, 415, 500);
-  delay(500*1.3);
-  tone(buzzPin, 466, 500);
-  delay(500*1.3);
-  tone(buzzPin, 370, 1000);
-  delay(1000*1.3);
-  noTone(buzzPin);
-
   pinMode(3,INPUT_PULLUP);
   pinMode(4,INPUT_PULLUP);
   pinMode(5,INPUT_PULLUP);
@@ -130,16 +161,7 @@ void setup() {
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
-  
-  matrix.fillScreen(LOW); // show black
-  matrix.write();
-  delay(500);
-  
   fetchAlarmData();
-  scrollMessage("Please Enjoy!");
-  matrix.fillScreen(LOW); // show black
-  matrix.write();
-  delay(1000);
 }
 
 void loop() {
@@ -152,18 +174,22 @@ void loop() {
       editTimer = millis(); 
     }
     getTime();
-  }else if(state == 1){{//menu mode
-    if(key == "L"){//go to set time mode
-      state = 2;
-      editTimer = millis();
-    }else if(key == "R"){//go to set alarm mode
-      state = 3;
-      editTimer = millis();
-    }else if(key == "S"){//exit
-      state = 0;  
-      editTimer = millis();
+  }else if(state == 1){//menu mode
+    if(key == "L"){
+      if(menuCurrentView>0){
+        menuCurrentView--;  
+        menuAnimation();
+      }
+      editTimer = millis(); 
+    }else if(key == "R"){
+      if(menuCurrentView<6){
+        menuCurrentView++;  
+        menuAnimation();
+      }
+      editTimer = millis(); 
+    }else if(key == "S"){
+      editTimer = millis(); 
     }
-  }
   }else if(state == 2){//set time mode
     if(key == "L"){
       minusOneTime();  
@@ -214,7 +240,7 @@ void loop() {
     }
   }
 
-  if(state != 0 and millis() - editTimer > 15000){
+  if(state != 0 and millis() - editTimer > 35000){
     state = 0;  
     selectedTime = 3;
   }
@@ -303,10 +329,7 @@ void drawDisplay(){
       }
     }
   }else if(state == 1){
-    matrix.drawBitmap(1, 0,  clockBitmap, 8, 8, 1);
-    matrix.drawBitmap(23, 0,  volumeBitmap, 8, 8, 1);
-    matrix.fillRect(11, 0, 10, 8, 1);
-    matrix.drawBitmap(12, 0,  bellBitmap, 8, 8, 0);
+    
   }else if(state == 3){//set alarm
     String strHrAlarm = String(alarmData[0]); 
     if(alarmData[0]<10){
@@ -344,12 +367,12 @@ void drawDisplay(){
       if(alarmState==0){
         noTone(buzzPin);
         matrix.fillScreen(LOW);
-        matrix.drawBitmap(12, 0,  bellBitmap, 8, 8, 1);
+        matrix.drawBitmap(12, 0,  setAlarmBitmap, 8, 8, 1);
         alarmState = 1;
       }else if(alarmState==1){
         tone(buzzPin, 415, 500);
         matrix.fillScreen(HIGH);
-        matrix.drawBitmap(12, 0,  bellBitmap, 8, 8, 0);
+        matrix.drawBitmap(12, 0,  setAlarmBitmap, 8, 8, 0);
         alarmState = 0;
       }
       alarmBlinkTimer = millis();
@@ -468,22 +491,35 @@ void writeAlarmData(){
 void scrollMessage(String msg) {
   msg += " "; // add a space at the end
   for ( int i = 0 ; i < width * msg.length() + matrix.width() - 1 - spacer; i++ ) {
-
     int letter = i / width;
     int x = (matrix.width() - 1) - i % width;
     int y = (matrix.height() - 8) / 2; // center the text vertically
- 
     while ( x + width - spacer >= 0 && letter >= 0 ) {
       if ( letter < msg.length() ) {
         matrix.drawChar(x, y, msg[letter], HIGH, LOW, 1);
       }
-
       letter--;
       x -= width;
     }
-
     matrix.write(); // Send bitmap to display
     delay(20);
   }
   matrix.setCursor(0,0);
+}
+
+void menuAnimation(){
+  if(menuCurrentView<6){
+    for(int i=0;i<12;i++){
+      matrix.fillScreen(LOW);
+      matrix.drawBitmap(23-i-11*menuCurrentView,0,setClockBitmap,8,8,1);
+      matrix.drawBitmap(34-i-11*menuCurrentView, 0, setAlarmBitmap , 8, 8, 1);
+      matrix.drawBitmap(45-i-11*menuCurrentView, 0, countDownBitmap, 8, 8, 1);
+      matrix.drawBitmap(56-i-11*menuCurrentView, 0, stopWatchBitmap, 8, 8, 1);
+      matrix.drawBitmap(67-i-11*menuCurrentView, 0, scoreBoardBitmap, 8, 8, 1);
+      matrix.drawBitmap(67-i-11*menuCurrentView, 0, diceBitmap, 8, 8, 1);
+      matrix.write();
+      delay(15);
+    }
+    menuCurrentView++;
+  }
 }
