@@ -46,7 +46,18 @@ namespace {
   DS1302 rtc(kCePin, kIoPin, kSclkPin);
 }//namespace
 
-static const unsigned char PROGMEM setClockBitmap[] =
+static const unsigned char PROGMEM empty_bitmap[] =
+{ B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000,
+  B00000000
+};
+
+static const unsigned char PROGMEM setClock_bitmap[] =
 { B00111100,
   B01010010,
   B10010001,
@@ -57,7 +68,7 @@ static const unsigned char PROGMEM setClockBitmap[] =
   B00111100 
 };
 
-static const unsigned char PROGMEM setAlarmBitmap[] =
+static const unsigned char PROGMEM setAlarm_bitmap[] =
 { B00011000,
   B00111100,
   B01100110,
@@ -67,7 +78,7 @@ static const unsigned char PROGMEM setAlarmBitmap[] =
   B11111111,
   B00011000
 };
-static const unsigned char PROGMEM countDownBitmap[] =
+static const unsigned char PROGMEM countDown_bitmap[] =
 { B01111111,
   B01100011,
   B00110110,
@@ -77,7 +88,7 @@ static const unsigned char PROGMEM countDownBitmap[] =
   B01100011,
   B01111111
 };
-static const unsigned char PROGMEM stopWatchBitmap[] =
+static const unsigned char PROGMEM stopWatch_bitmap[] =
 {
   B00011100,
   B01001000,
@@ -88,18 +99,7 @@ static const unsigned char PROGMEM stopWatchBitmap[] =
   B01000001,
   B00111110
 };
-static const unsigned char PROGMEM diceBitmap[] =
-{
-  B00000000,
-  B01111100,
-  B10000010,
-  B10101010,
-  B10010010,
-  B10101010,
-  B10000010,
-  B01111100
-};
-static const unsigned char PROGMEM scoreBoardBitmap[] =
+static const unsigned char PROGMEM scoreBoard_bitmap[] =
 {
   B00000000,
   B01000111,
@@ -110,16 +110,18 @@ static const unsigned char PROGMEM scoreBoardBitmap[] =
   B01000001,
   B11100111
 };
-static const unsigned char PROGMEM volumeBitmap[] =
-{ B00010000,
-  B00110010,
-  B11110001,
-  B11110101,
-  B11110101,
-  B11110001,
-  B00110010,
-  B00010000
+static const unsigned char PROGMEM dice_bitmap[] =
+{
+  B00000000,
+  B01111100,
+  B10000010,
+  B10101010,
+  B10010010,
+  B10101010,
+  B10000010,
+  B01111100
 };
+
 
 int btnLeft = 0;
 int btnRight = 0;
@@ -144,7 +146,8 @@ unsigned long alarmBlinkTimer = millis();
 bool alarmState = 1;
 int spacer = 1;  // dots between letters
 int width = 5 + spacer; // The font width is 5 pixels + spacer
-int menuCurrentView = 0;
+int menuSelected = 1;
+static unsigned char* menuArray[8]={empty_bitmap,setClock_bitmap,setAlarm_bitmap,countDown_bitmap,stopWatch_bitmap,scoreBoard_bitmap,dice_bitmap,empty_bitmap};
 
 void setup() {
   matrix.setIntensity(brightness);
@@ -176,18 +179,17 @@ void loop() {
     getTime();
   }else if(state == 1){//menu mode
     if(key == "L"){
-      if(menuCurrentView>0){
-        menuCurrentView--;  
-        menuAnimation();
+      if(menuSelected<6){
+        menuSelected++;  
       }
       editTimer = millis(); 
     }else if(key == "R"){
-      if(menuCurrentView<6){
-        menuCurrentView++;  
-        menuAnimation();
+      if(menuSelected>1){
+        menuSelected--;  
       }
       editTimer = millis(); 
     }else if(key == "S"){
+      state = 0;
       editTimer = millis(); 
     }
   }else if(state == 2){//set time mode
@@ -329,7 +331,9 @@ void drawDisplay(){
       }
     }
   }else if(state == 1){
-    
+    matrix.drawBitmap(1,0,menuArray[1],8,8,1);
+    matrix.drawBitmap(12,0,menuArray[2],8,8,1);
+    matrix.drawBitmap(23,0,menuArray[3],8,8,1);
   }else if(state == 3){//set alarm
     String strHrAlarm = String(alarmData[0]); 
     if(alarmData[0]<10){
@@ -367,12 +371,12 @@ void drawDisplay(){
       if(alarmState==0){
         noTone(buzzPin);
         matrix.fillScreen(LOW);
-        matrix.drawBitmap(12, 0,  setAlarmBitmap, 8, 8, 1);
+        matrix.drawBitmap(12, 0,  setAlarm_bitmap, 8, 8, 1);
         alarmState = 1;
       }else if(alarmState==1){
         tone(buzzPin, 415, 500);
         matrix.fillScreen(HIGH);
-        matrix.drawBitmap(12, 0,  setAlarmBitmap, 8, 8, 0);
+        matrix.drawBitmap(12, 0,  setAlarm_bitmap, 8, 8, 0);
         alarmState = 0;
       }
       alarmBlinkTimer = millis();
@@ -507,6 +511,7 @@ void scrollMessage(String msg) {
   matrix.setCursor(0,0);
 }
 
+/*
 void menuAnimation(){
   if(menuCurrentView<6){
     for(int i=0;i<12;i++){
@@ -523,3 +528,4 @@ void menuAnimation(){
     menuCurrentView++;
   }
 }
+*/
