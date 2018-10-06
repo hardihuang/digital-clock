@@ -88,45 +88,65 @@ static const unsigned char dice_bitmap[] =
 };
 
 static unsigned char*  menuArray[8] ={empty_bitmap,setClock_bitmap,setAlarm_bitmap,countDown_bitmap,stopWatch_bitmap,scoreBoard_bitmap,dice_bitmap,empty_bitmap};
-int menuSelected = 1;
+int menuSelected =3;
+String btn = "R";
+
 void setup() {
   // put your setup code here, to run once:
-  matrix.setIntensity(1);matrix.setRotation(0, 1);
+  matrix.setIntensity(10);
+  matrix.setRotation(0, 1);
   matrix.setRotation(1, 1);
   matrix.setRotation(2, 1);
   matrix.setRotation(3, 1);
   matrix.fillScreen(LOW); // show black
   Serial.begin(9600); 
 }
-  
 
 void loop() {
   matrix.fillScreen(LOW); // show black
-  menuAnimation();
-  //matrix.drawBitmap(1,0,menuArray[3],8,8,1);
-  //matrix.drawBitmap(12,0,menuArray[4],8,8,1);
-  //matrix.drawBitmap(23,0,menuArray[5],8,8,1);  
+  matrix.drawBitmap(1,0,menuArray[menuSelected-1],8,8,1);
+  matrix.drawBitmap(12,0,menuArray[menuSelected],8,8,1);
+  matrix.drawBitmap(23,0,menuArray[menuSelected+1],8,8,1);
   matrix.write();
+  delay(1000);
 
-  delay(2000);
+  if(btn == "L"){
+    if(menuSelected>1){
+      menuSelected--;
+    }else{
+      menuSelected = 6;  
+    }
+    menuAnimation(1);
+  }else if(btn == "R"){
+    
+    if(menuSelected<6){
+      menuSelected++;
+    }else{
+      menuSelected = 1;  
+    }
+    menuAnimation(-1);
+  }
+  
+  delay(1000);
 }
 
 
-void menuAnimation(){
+void menuAnimation(int dir){
+  int q=0;
+  if(dir==1){//left pressed, animation go right
+    q=-1;
+  }else if(dir == -1){//right pressed, animation go left
+    q=-3;
+  }
   for(int i=0; i<12;i++){
     matrix.fillScreen(LOW); 
-    matrix.drawBitmap(1-i,0,menuArray[menuSelected-2],8,8,1);
-    matrix.drawBitmap(12-i,0,menuArray[menuSelected-1],8,8,1);
-    matrix.drawBitmap(23-i,0,menuArray[menuSelected],8,8,1);
-    matrix.drawBitmap(34-i,0,menuArray[menuSelected+1],8,8,1);
+    matrix.drawBitmap(-10+i*dir,0,menuArray[menuSelected+q],8,8,1);
+    matrix.drawBitmap(1+i*dir,0,menuArray[menuSelected+q+1],8,8,1);
+    matrix.drawBitmap(12+i*dir,0,menuArray[menuSelected+q+2],8,8,1);
+    matrix.drawBitmap(23+i*dir,0,menuArray[menuSelected+q+3],8,8,1);
+    matrix.drawBitmap(34+i*dir,0,menuArray[menuSelected+q+4],8,8,1);
     matrix.write();
     delay(20);
   }
-  if(menuSelected<6){
-    menuSelected++;
-  }else{
-    menuSelected = 1;  
-  }
-  
 }
 
