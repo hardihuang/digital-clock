@@ -1,8 +1,9 @@
 /*
- *Digital Clock V0.3.0 
+ *Digital Clock V0.4.0 
  *by Hardi Huang
  *
  *update log:
+ *  V0.4.0 Oct/7/2018 23:30 added souch sensor and new perfboard design
  *  V0.3.0 Oct/6/2018 11:30 added menu interface with animation
  *  V0.2.8 Oct/4/2018 18:22 reduced the sram space, ready for adding more functions
  *  V0.2.7 Oct/3/2018 20:29 added opening greeting hello message 
@@ -16,10 +17,10 @@
 /* 
 max7219 matrix display CONNECTIONS:
  *CLK -> 13
- *CS -> 10
+ *CS -> 10 
  *DIN -> 11
 BUTTON CONNECTIONS:
- *arduino internel pull-up
+ *touch sensor button
  *btnLeft -> D5
  *btnRight -> D3
  *btnSet -> D4
@@ -27,6 +28,11 @@ RTC 1302 CLOCK CONNECTIONS:
  * DAT ->D6
  * CLK ->D7
  * RST ->D8
+OTHER CONNECTIONS:
+ * buzzPin = 9;
+ * photocellPin = A1;
+ * tempture sensor = A2;
+ * 
 */
 
 #include <SPI.h>
@@ -82,14 +88,14 @@ static const unsigned char setAlarm_bitmap[] =
   B00011000
 };
 static const unsigned char countDown_bitmap[] =
-{ B01111111,
-  B01100011,
-  B00110110,
-  B00010100,
-  B00010100,
-  B00110110,
-  B01100011,
-  B01111111
+{ B00000000,
+  B01111100,
+  B01000100,
+  B00101000,
+  B00010000,
+  B00101000,
+  B01000100,
+  B01111100
 };
 static const unsigned char stopWatch_bitmap[] =
 {
@@ -105,13 +111,13 @@ static const unsigned char stopWatch_bitmap[] =
 static const unsigned char scoreBoard_bitmap[] =
 {
   B00000000,
-  B01000111,
-  B11000001,
-  B01010001,
-  B01000111,
-  B01010001,
-  B01000001,
-  B11100111
+  B00000000,
+  B10100110,
+  B10101000,
+  B10100100,
+  B10100010,
+  B01001100,
+  B00000000
 };
 static const unsigned char dice_bitmap[] =
 {
@@ -135,7 +141,7 @@ int btnLeft = 0;
 int btnRight = 0;
 int btnSet = 0;
 int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int alarmData[3] = {17,40,1};//hour,minute,on or off
+int alarmData[3] = {8,0,1};//hour,minute,on or off
 unsigned long snoozeTimer = millis();
 int state = 0; //0==display mode; 1==menu; 2==alarm goes off; 3==set time; 4==set alarm; 5==count down; 6==stop watch; 7==score board; 8==dice;
 int selectedTime = 3; //which one we are editing right now,same order with timeData
@@ -143,6 +149,7 @@ int selectedAlarm = 0;
 int debounce[3];
 String key="0";
 char hexaKeys[]={'L','R','S'};
+unsigned long syncTimer = millis();
 unsigned long editTimer = millis();
 unsigned long dotTimer = millis();
 bool dotState = 0;
@@ -159,10 +166,11 @@ void setup() {
   matrix.setRotation(1, 1);
   matrix.setRotation(2, 1);
   matrix.setRotation(3, 1);
+
+/*
   matrix.fillScreen(LOW); // show black
   matrix.setCursor(1, 1);
-  matrix.print("Hello");
-  matrix.write();
+  centerPrint("hello");
   
   tone(buzzPin, 415, 500);
   tone(buzzPin, 415, 500);
@@ -172,28 +180,22 @@ void setup() {
   tone(buzzPin, 370, 1000);
   delay(1000*1.3);
   noTone(buzzPin);
-
-  pinMode(3,INPUT_PULLUP);
-  pinMode(4,INPUT_PULLUP);
-  pinMode(5,INPUT_PULLUP);
+*/
+  pinMode(3,INPUT);
+  pinMode(4,INPUT);
+  pinMode(5,INPUT);
   pinMode(buzzPin, OUTPUT);
   digitalWrite(buzzPin, LOW);
   Serial.begin(9600); 
   rtc.writeProtect(false);
   rtc.halt(false);
-  
-  matrix.fillScreen(LOW); // show black
-  matrix.write();
-  delay(500);
-  
+  writeAlarmData();
   fetchAlarmData();
-  scrollMessage("Please Enjoy!");
-  matrix.fillScreen(LOW); // show black
-  matrix.write();
-  delay(1000);
+  getTime();
 }
 
 void loop() {
+  //Serial.println(state);
   changeBrightness();
   checkAlarm();
   getKey();
@@ -202,7 +204,11 @@ void loop() {
       state = 1; 
       editTimer = millis(); 
     }
-    getTime();
+    if(millis()-syncTimer>=10000){
+      getTime();
+      syncTimer = millis();
+    }
+    
   }else if(state == 1){//menu mode
     if(key == "L"){
       editTimer = millis(); 
@@ -274,13 +280,21 @@ void loop() {
       writeAlarmData();
     }
   }else if(state == 5){//countdown mode
-      
+    if(key == "S"){
+      state = 0;  
+    }
   }else if(state == 6){//stopwatch mode
-      
+    if(key == "S"){
+      state = 0;  
+    } 
   }else if(state == 7){//scoreboard mode
-      
+    if(key == "S"){
+      state = 0;  
+    }  
   }else if(state == 8){//dice mode
-      
+    if(key == "S"){
+      state = 0;  
+    }  
   }
 
   if(state != 0 and millis() - editTimer > 15000){
@@ -298,13 +312,13 @@ void loop() {
 void getKey(){
   int keyArray[] = {5,3,4};//left, right, set
   for(int i = 0; i < 3; i++){
-    if(digitalRead(keyArray[i]) == 0){
+    if(digitalRead(keyArray[i]) == 1){
       if(debounce[i] == 0){
         key = hexaKeys[i];
         digitalWrite(buzzPin, HIGH); 
         delay(1);
         digitalWrite(buzzPin, LOW); 
-        debounce[i] = 4;  
+        debounce[i] = 3;  
       }else{
         debounce[i] -= 1;  
       }
@@ -344,11 +358,11 @@ void drawDisplay(){
       strSecTime="0"+strSecTime;
     }
   //draw hours
-    matrix.drawChar(1, 1, strHrTime.charAt(0),HIGH,LOW, 1);
-    matrix.drawChar(8, 1, strHrTime.charAt(1),HIGH,LOW, 1);
+    matrix.drawChar(1, 0, strHrTime.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHrTime.charAt(1),HIGH,LOW, 1);
   //draw minutes
-    matrix.drawChar(19, 1, strMinTime.charAt(0), HIGH, LOW, 1);
-    matrix.drawChar(26, 1, strMinTime.charAt(1), HIGH, LOW, 1);
+    matrix.drawChar(19, 0, strMinTime.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMinTime.charAt(1), HIGH, LOW, 1);
   //draw dots
     if(millis()-dotTimer>=500  ){
       if(dotState == 1){
@@ -385,16 +399,16 @@ void drawDisplay(){
       strMinAlarm="0"+strMinAlarm;
     }
   //draw hours
-    matrix.drawChar(1, 1, strHrAlarm.charAt(0),HIGH,LOW, 1);
-    matrix.drawChar(8, 1, strHrAlarm.charAt(1),HIGH,LOW, 1);
+    matrix.drawChar(1, 0, strHrAlarm.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHrAlarm.charAt(1),HIGH,LOW, 1);
   //draw minutes
-    matrix.drawChar(19, 1, strMinAlarm.charAt(0), HIGH, LOW, 1);
-    matrix.drawChar(26, 1, strMinAlarm.charAt(1), HIGH, LOW, 1);
+    matrix.drawChar(19, 0, strMinAlarm.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMinAlarm.charAt(1), HIGH, LOW, 1);
   //draw on off indicator
     if(alarmData[2]==1){
-      matrix.drawPixel(31,0,1);
+      matrix.drawPixel(31,7,1);
     }else{
-      matrix.drawPixel(31,0,0);  
+      matrix.drawPixel(31,7,0);  
     }
   //draw dot arrow
     if(selectedAlarm == 0){//left arrow edit hour
@@ -404,8 +418,8 @@ void drawDisplay(){
       matrix.drawRect(15, 3, 1, 3, 1);
       matrix.drawPixel(16,4,1);
     }else if(selectedAlarm == 2){//down right arrow edit on off
-      matrix.drawRect(15, 0, 1, 3, 1);
-      matrix.drawPixel(16,1,1);
+      matrix.drawRect(15, 5, 1, 3, 1);
+      matrix.drawPixel(16,6,1);
     }
   }else if(state == 2){//alarm goes off
     if(millis() - alarmBlinkTimer>=500){
@@ -422,7 +436,16 @@ void drawDisplay(){
       }
       alarmBlinkTimer = millis();
     }   
+  }else if(state == 5){
+    centerPrint("test");
+  }else if(state == 6){
+    centerPrint("test");
+  }else if(state == 7){
+    centerPrint("test");
+  }else if(state == 8){
+    centerPrint("test");
   }
+
   matrix.write();
 }
 
@@ -497,7 +520,12 @@ void updateTimeData(){
 
 void changeBrightness(){
   photocellReading = analogRead(photocellPin);
-  int i = map(photocellReading,1023,0,0,10);
+  int i ;
+  if(photocellReading<=750){
+    i = map(photocellReading,750,0,0,15);
+  }else{
+    i=0;
+  }
   if(state != 2 and abs(brightness-i)>1){//use temp i to see if light has big change to prevent brightness flicking
     brightness = i;
     matrix.setIntensity(brightness); 
@@ -549,6 +577,13 @@ void scrollMessage(String msg) {
   matrix.setCursor(0,0);
 }
 
+void centerPrint(String msg) {
+  int x = (matrix.width() - (msg.length() * width)) / 2;
+  matrix.setCursor(x, 0);
+  matrix.print(msg);
+  matrix.write();
+}
+
 void menuAnimation(int dir){
   int q=0;
   if(dir==1){//left pressed, animation go right
@@ -568,3 +603,6 @@ void menuAnimation(int dir){
   }
 }
 
+void stopWatch(){
+    
+}
