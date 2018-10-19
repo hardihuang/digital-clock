@@ -55,7 +55,7 @@ void loop(){
       timeArr[n][31-m] = 1;  
       drawDisplay();
       noTone(buzzPin);
-      delay(100);
+      delay(1000);
       
     }  
   }
