@@ -111,10 +111,8 @@ unsigned long alarmBlinkTimer = millis();
 
 //state
 int state = 0; //0==display mode; 1==menu; 2==alarm goes off; 3==set time; 4==set alarm; 5==count down; 6==stop watch; 7==score board; 8==dice;
-static unsigned char*  menuArray[8] ={empty_bitmap,setClock_bitmap,setAlarm_bitmap,countDown_bitmap,stopWatch_bitmap,scoreBoard_bitmap,dice_bitmap,empty_bitmap};
 int menuSelected =1;
-int selectedTime = 3; //which one we are editing right now,same order with timeData
-int selectedAlarm = 0;
+int selected =0; //which one we are editing right now,0->hour, 1->minute, 2->second
 bool dotState = 0;
 bool alarmState = 1;
 int rotationState = 0;//0->level;1->tilt left
@@ -125,9 +123,11 @@ String key="0";
 char hexaKeys[]={'L','R','S'};
 
 //data
-int timeData[7] = {2018,9,28,18,34,44,4}; //year,month,date,hour,minute,second,day
-int alarmData[3] = {8,0,1};//hour,minute,on or off
-int stopWatchData[3] = {0,0,0};//minute, second, on or off
+static unsigned char*  menuArray[8] ={empty_bitmap,setClock_bitmap,setAlarm_bitmap,countDown_bitmap,stopWatch_bitmap,scoreBoard_bitmap,dice_bitmap,empty_bitmap};
+int timeData[3] = {8,0,0}; //hour,minute,second
+int alarmData[4] = {8,0,0,1};//hour,minute,second, on or off
+int stopWatchData[4] = {0,0,0,0};
+int countDownData[4 = {0,0,0,0};
 
 //others
 int photocellReading;
@@ -140,14 +140,115 @@ void setup() {
   rtcSetup();
   fetchAlarmData();
   getTime();
-  greating();
-  delay(1000);
+  //greating();
 }
 
 void loop() {
-  
-  centerPrint("Hardi");
-  matrix.fillScreen(LOW);
+  changeBrightness();
+  checkAlarm();
+  getKey();
+  //control flow
+  switch(state){
+    case 0://display mode clock face
+      if(key == "S"){state = 1;}
+      if(millis()-syncTimer>=10000){
+        getTime();
+        syncTimer = millis();  
+      }
+      clockFace();
+    break;
+    case 1://menu mode
+      menu();
+      if(key == "L"){
+        if(menuSelected>1){
+          menuSelected--;
+          menuAnimation(1);
+        }else{//exit to clock face
+          menuSelected = 1;
+          state = 0;
+        }
+      }else if(key == "R"){
+        if(menuSelected<6){
+          menuSelected++;
+          menuAnimation(-1);
+        }else{
+          //menuSelected = 1;  
+        }
+      }else if(key == "S"){
+        state = menuSelected+2;
+        menuSelected=1;
+      }
+    break;
+    case 2://alarm goes off
+      alarmOn();
+      if(key == "S" || key == "L" || key == "R"){
+        noTone(buzzPin);
+        digitalWrite(buzzPin, LOW); 
+        snoozeTimer = millis();
+        matrix.setIntensity(brightness); 
+        state = 0;
+      }
+    break;
+    case 3://set time mode
+      if(key == "L"){
+        addMinusOne(0,timeData); 
+      }else if(key == "R"){
+        addMinusOne(1,timeData); 
+      }else if(key == "S"){
+        if(selected<1){
+          selected++;  
+        }else{
+          selected= 0;
+          state = 0;  
+          timeData[2]=0;//reset second
+          updateTimeData();
+        }
+      }
+      setTime();
+    break;
+    case 4://set alarm mode
+      if(key == "L"){
+        addMinusOne(0,alarmData);  
+        writeAlarmData();
+      }else if(key == "R"){
+        addMinusOne(1,alarmData); 
+        writeAlarmData();
+      }else if(key == "S"){
+        if(selected<1){
+          selected++;
+        }else if(selected == 1){
+          selected = 3;
+        }else{
+          selected = 0;
+          state = 0;  
+        }
+        writeAlarmData();
+      }
+      setAlarm();
+    break;
+    case 5://count down mode
+      countDown();
+      if(key == "S"){state = 0;}
+    break;
+    case 6://stop watch mode
+      stopWatch();
+      if(key == "S"){state = 0;}
+    break;
+    case 7://score board mode
+      scoreBoard();
+      if(key == "S"){state = 0;}
+    break;
+    case 8://dice mode
+      dice();
+      if(key == "S"){state = 0;}
+    break;
+
+    default:
+    break;
+  }//end switch
+
+
+  key = "0";
   delay(100);
 }
 
@@ -182,12 +283,12 @@ void rtcSetup(){
  * loop routine functions
 ****/
 void checkAlarm(){  
-  if(timeData[3] == alarmData[0]){//hour match
-    if(timeData[4] == alarmData[1]){//minute match
+  if(timeData[0] == alarmData[0]){//hour match
+    if(timeData[1] == alarmData[1]){//minute match
       if(alarmData[2] and state != 4 and millis()-snoozeTimer>60000){//do not go off if user is setting alarm  or user already snoozed the alarm
         state = 2;
       }
-    }else if(timeData[4] != alarmData[1] and state == 2){
+    }else if(timeData[1] != alarmData[1] and state == 2){
       state = 0;  
     }
   }
@@ -250,6 +351,7 @@ void greating(){
   delay(500);
   scrollMessage("Please Enjoy!");
   matrix.fillScreen(LOW); // show black
+  delay(1000);
 }
 void checkRotation(){
     if(digitalRead(tiltSwitch)){
@@ -274,6 +376,7 @@ void checkRotation(){
 }
 
 void centerPrint(String msg) {
+  matrix.fillScreen(LOW);
   int x = (matrix.width() - (msg.length() * 6)) / 2;
   matrix.setCursor(x, 0);
   matrix.print(msg);
@@ -311,30 +414,101 @@ void fetchAlarmData(){
 }
 void getTime(){
   Time t = rtc.time();
-  timeData[0] = t.yr;
-  timeData[1] = t.mon;
-  timeData[2] = t.date;
-  timeData[3] = t.hr;
-  timeData[4] = t.min;
-  timeData[5] = t.sec;
-  timeData[6] = t.day;
+  timeData[0] = t.hr;
+  timeData[1] = t.min;
+  timeData[2] = t.sec;
 }
 void updateTimeData(){
   //Time t(2013, 9, 22, 01, 38, 50, Time::kTuesday);
-  Time t(timeData[0], timeData[1], timeData[2], timeData[3], timeData[4], timeData[5],  timeData[6]);
+  Time t(2000, 1, 1, timeData[0], timeData[1], timeData[2], 1);
   rtc.time(t);
 }
-void addMinusOne(){
-  
+//operation: 0->minus; 1->add;  
+void addMinusOne(int operation, int arr[]){
+  int upperLimit;
+  int lowerLimit;
+  switch(selected){
+    case 0://hour
+      upperLimit = 23;
+      lowerLimit = 0;
+      break;
+    case 1://minute
+      upperLimit = 59;
+      lowerLimit = 0;
+      break;
+    case 2://second
+      upperLimit = 59;
+      lowerLimit = 0; 
+      break;
+    case 3://on or off
+      upperLimit = 1;
+      lowerLimit = 0;
+      break;
+  }
+  switch(operation){
+    case 0://minuse one
+      if(arr[selected]>lowerLimit){
+        arr[selected]--;  
+      }else if(arr[selected] == lowerLimit){
+        arr[selected] = upperLimit;  
+      }
+    break;
+    case 1:
+      if(arr[selected]<upperLimit){
+        arr[selected]++;  
+      }else if(arr[selected] == upperLimit){
+        arr[selected] = lowerLimit;  
+      }
+    break;
+  }
 }
 
-void formateDigit(){
-    
+String formateDigit(int digitTemp){
+    String strTemp = String(digitTemp);
+    if(digitTemp<10){
+      strTemp = "0"+strTemp;  
+    }
+    return strTemp;
 }
 
 /****
  * drawDisplay functions fordifferent interfaces
 ****/
+
+
+void clockFace(){
+  String strHr = formateDigit(timeData[0]);
+  String strMin = formateDigit(timeData[1]);
+  String strSec = formateDigit(timeData[2]);
+  
+  matrix.fillScreen(LOW);
+  //draw hours
+    matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
+    //draw minutes
+    matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMin.charAt(1), HIGH, LOW, 1);
+  //draw dots
+    if(millis()-dotTimer>=500  ){
+      if(dotState == 1){
+        dotState = 0;
+      }else if(dotState == 0 and state == 0){
+        dotState = 1;
+      }
+      dotTimer = millis();  
+    }
+    matrix.fillRect(15, 1, 2, 2, dotState);
+    matrix.fillRect(15, 5, 2, 2, dotState);
+    matrix.write();
+}
+
+void menu(){
+    matrix.fillScreen(LOW);
+    matrix.drawBitmap(1,0,menuArray[menuSelected-1],8,8,1);
+    matrix.drawBitmap(12,0,menuArray[menuSelected],8,8,1);
+    matrix.drawBitmap(23,0,menuArray[menuSelected+1],8,8,1);
+    matrix.write();  
+}
 void menuAnimation(int dir){
   int q=0;
   if(dir==1){//left pressed, animation go right
@@ -353,13 +527,78 @@ void menuAnimation(int dir){
     delay(20);
   }
 }
+void setTime(){
+    matrix.fillScreen(LOW); 
+    String strHr = formateDigit(timeData[0]);
+    String strMin = formateDigit(timeData[1]);
+    String strSec = formateDigit(timeData[2]);
+    //draw hours
+    matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
+    //draw minutes
+    matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMin.charAt(1), HIGH, LOW, 1);
+  
+   if(selected == 0){//left arrow edit hour
+      matrix.drawRect(16, 3, 1, 3, 1);
+      matrix.drawPixel(15,4,1);
+    }else if(selected == 1){//right arrow edit minute
+      matrix.drawRect(15, 3, 1, 3, 1);
+      matrix.drawPixel(16,4,1);
+    }
+    matrix.write();
+}
+void setAlarm(){
+    matrix.fillScreen(LOW); 
+    String strHr = formateDigit(alarmData[0]);
+    String strMin = formateDigit(alarmData[1]);
 
-void clockFace(){}
-void setTime(){}
-void setAlarm(){}
-void countDown(){}
-void stopWatch(){}
-void scoreBoard(){}
-void dice(){}
+  //draw hours
+    matrix.drawChar(1, 0, strHr.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strHr.charAt(1),HIGH,LOW, 1);
+  //draw minutes
+    matrix.drawChar(19, 0, strMin.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strMin.charAt(1), HIGH, LOW, 1);
+  //draw on off indicator
+    if(alarmData[3]==1){
+      matrix.drawPixel(31,7,1);
+    }else{
+      matrix.drawPixel(31,7,0);  
+    }
+  //draw dot arrow
+    if(selected == 0){//left arrow edit hour
+      matrix.drawRect(16, 3, 1, 3, 1);
+      matrix.drawPixel(15,4,1);
+    }else if(selected == 1){//right arrow edit minute
+      matrix.drawRect(15, 3, 1, 3, 1);
+      matrix.drawPixel(16,4,1);
+    }else if(selected == 3){//down right arrow edit on off
+      matrix.drawRect(15, 5, 1, 3, 1);
+      matrix.drawPixel(16,6,1);
+    }
+    matrix.write();
+}
+
+void alarmOn(){
+    if(millis() - alarmBlinkTimer>=500){
+      if(alarmState==0){
+        noTone(buzzPin);
+        matrix.fillScreen(LOW);
+        matrix.drawBitmap(12, 0,  menuArray[2], 8, 8, 1);
+        alarmState = 1;
+      }else if(alarmState==1){
+        tone(buzzPin, 415, 500);
+        matrix.fillScreen(HIGH);
+        matrix.drawBitmap(12, 0,   menuArray[2], 8, 8, 0);
+        alarmState = 0;
+      }
+      alarmBlinkTimer = millis();
+    }  
+    matrix.write(); 
+}
+void countDown(){centerPrint("C D");}
+void stopWatch(){centerPrint("S W");}
+void scoreBoard(){centerPrint("S B");}
+void dice(){centerPrint("D C");}
 
 
