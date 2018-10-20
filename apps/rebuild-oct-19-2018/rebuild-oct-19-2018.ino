@@ -127,7 +127,7 @@ static unsigned char*  menuArray[8] ={empty_bitmap,setClock_bitmap,setAlarm_bitm
 int timeData[3] = {8,0,0}; //hour,minute,second
 int alarmData[4] = {8,0,0,1};//hour,minute,second, on or off
 int stopWatchData[4] = {0,0,0,0};
-int countDownData[4 = {0,0,0,0};
+int countDownData[4] = {0,0,0,0};
 
 //others
 int photocellReading;
@@ -181,6 +181,7 @@ void loop() {
     break;
     case 2://alarm goes off
       alarmOn();
+      getTime();//update time data
       if(key == "S" || key == "L" || key == "R"){
         noTone(buzzPin);
         digitalWrite(buzzPin, LOW); 
@@ -285,7 +286,7 @@ void rtcSetup(){
 void checkAlarm(){  
   if(timeData[0] == alarmData[0]){//hour match
     if(timeData[1] == alarmData[1]){//minute match
-      if(alarmData[2] and state != 4 and millis()-snoozeTimer>60000){//do not go off if user is setting alarm  or user already snoozed the alarm
+      if(alarmData[3] and state != 4 and millis()-snoozeTimer>60000){//do not go off if user is setting alarm  or user already snoozed the alarm
         state = 2;
       }
     }else if(timeData[1] != alarmData[1] and state == 2){
