@@ -140,17 +140,11 @@ void setup() {
   rtcSetup();
   fetchAlarmData();
   getTime();
+  greating();
+  delay(1000);
 }
 
 void loop() {
-  //unit test
-    //getKey();
-    //centerPrint(key);
-    //changeBrightness();
-    //checkRotation();
-    //getTime();
-    //scrollMessage("Hello World!");
-    //menuAnimation(1);
   
   centerPrint("Hardi");
   matrix.fillScreen(LOW);
@@ -237,6 +231,26 @@ void getKey(){
 /****
  * utility
 ****/
+
+void greating(){
+  matrix.setCursor(1, 1);
+  centerPrint("hello");
+  
+  tone(buzzPin, 415, 500);
+  tone(buzzPin, 415, 500);
+  delay(500*1.3);
+  tone(buzzPin, 466, 500);
+  delay(500*1.3);
+  tone(buzzPin, 370, 1000);
+  delay(1000*1.3);
+  noTone(buzzPin);
+
+  matrix.fillScreen(LOW); // show black
+  matrix.write();
+  delay(500);
+  scrollMessage("Please Enjoy!");
+  matrix.fillScreen(LOW); // show black
+}
 void checkRotation(){
     if(digitalRead(tiltSwitch)){
       rotationState = 0;
@@ -314,6 +328,9 @@ void addMinusOne(){
   
 }
 
+void formateDigit(){
+    
+}
 
 /****
  * drawDisplay functions fordifferent interfaces

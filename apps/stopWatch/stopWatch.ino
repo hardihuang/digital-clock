@@ -317,7 +317,6 @@ void loop() {
 }
 
 void getKey(){
-  checkRotation();
   int keyArray[] = {5,3,4};//left, right, set
   for(int i = 0; i < 3; i++){
     if(digitalRead(keyArray[i]) == 1){
