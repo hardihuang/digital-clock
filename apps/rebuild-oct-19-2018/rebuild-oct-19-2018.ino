@@ -233,7 +233,25 @@ void loop() {
     break;
     case 6://stop watch mode
       stopWatch();
-      if(key == "S"){state = 0;}
+      if(key == "S"){
+        if(stopWatchData[3] == 0){
+          stopWatchTimer = millis();
+          stopWatchData[3]=1;//start stopWatch
+        }else{
+          stopWatchData[3]=0;//stop stopWatch
+        }
+      }else if(key == "L"){//exit
+        stopWatchData[0]=0;
+        stopWatchData[1]=0;
+        stopWatchData[2]=0;
+        stopWatchData[3]=0;
+        state = 0;
+      }else if(key == "R"){//reset
+        stopWatchData[0]=0;
+        stopWatchData[1]=0;
+        stopWatchData[2]=0;
+        stopWatchData[3]=0;
+      }
     break;
     case 7://score board mode
       scoreBoard();
@@ -476,7 +494,6 @@ String formateDigit(int digitTemp){
  * drawDisplay functions fordifferent interfaces
 ****/
 
-
 void clockFace(){
   String strHr = formateDigit(timeData[0]);
   String strMin = formateDigit(timeData[1]);
@@ -598,7 +615,39 @@ void alarmOn(){
     matrix.write(); 
 }
 void countDown(){centerPrint("C D");}
-void stopWatch(){centerPrint("S W");}
+void stopWatch(){
+    matrix.fillScreen(LOW); 
+    String strMin = formateDigit(stopWatchData[1]);
+    String strSec = formateDigit(stopWatchData[2]);
+  //draw minutes 0-99
+    matrix.drawChar(1, 0, strMin.charAt(0),HIGH,LOW, 1);
+    matrix.drawChar(8, 0, strMin.charAt(1),HIGH,LOW, 1);
+  //draw seconds 0-59
+    matrix.drawChar(19, 0, strSec.charAt(0), HIGH, LOW, 1);
+    matrix.drawChar(26, 0, strSec.charAt(1), HIGH, LOW, 1);
+  //draw dots
+    matrix.fillRect(15, 1, 2, 2, 1);
+    matrix.fillRect(15, 5, 2, 2, 1);
+    if(stopWatchData[3]){
+      if( millis() - stopWatchTimer>=1000){ //update time
+        if(stopWatchData[2]<59){
+          stopWatchData[2]++;  
+        }else{
+          if(stopWatchData[1]<90){
+            stopWatchData[1]++;
+            stopWatchData[2]=0;  
+          }else{//reset and stop counting
+            stopWatchData[0]=0;
+            stopWatchData[1]=0;
+            stopWatchData[2]=0;
+            stopWatchData[3]=0;
+          }
+        }
+        stopWatchTimer = millis();
+      }
+    }
+    matrix.write();
+}
 void scoreBoard(){centerPrint("S B");}
 void dice(){centerPrint("D C");}
 
