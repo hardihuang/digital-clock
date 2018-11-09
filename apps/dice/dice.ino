@@ -1,44 +1,3 @@
-/*
- *Digital Clock V0.5.3
- *by Hardi Huang
- *
- *update log:
- *  V0.5.3 Oct/21/2018 17:19 added countdown app
- *  V0.5.2 Oct/20/2018 19:26 added scoreboard app
- *  V0.5.1 Oct/20/2018 18:56 added stopwatch app
- *  V0.5.0 Oct/20/2018 17:00 rebuild the whole system
- *  V0.4.0 Oct/7/2018 23:30 added souch sensor and new perfboard design
- *  V0.3.0 Oct/6/2018 11:30 added menu interface with animation
- *  V0.2.8 Oct/4/2018 18:22 reduced the sram space, ready for adding more functions
- *  V0.2.7 Oct/3/2018 20:29 added opening greeting hello message 
- *  V0.2.5 Oct/3/2018 20:01 added eeprom store alarm data function
- *  V0.2.4 Oct/3/2018 19:06 fixed alarm snooze function and bright flicking bug
- *  V0.2.2 sep/30/2018 11:35 added alarm function 
- *  V0.2.1 sep/29/2018 13:13 added photocell change brightness function
-*/
-
-
-/* 
-max7219 matrix display CONNECTIONS:
- *CLK -> 13
- *CS -> 10 
- *DIN -> 11
-BUTTON CONNECTIONS:
- *touch sensor button
- *btnLeft -> D5
- *btnRight -> D3
- *btnSet -> D4
-RTC 1302 CLOCK CONNECTIONS:
- * DAT ->D6
- * CLK ->D7
- * RST ->D8
-OTHER CONNECTIONS:
- * buzzPin = 9;
- * photocellPin = A1;
- * tiltSwitch sensor = A2;
- * 
-*/
-
 
 
 //include
@@ -180,6 +139,7 @@ int scoreBoardData[2] = {0,0};
 //others
 int photocellReading;
 int brightness=1;//1-15
+int diceFlag = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -188,7 +148,7 @@ void setup() {
   rtcSetup();
   fetchAlarmData();
   getTime();
-  greating();
+  //greating();
 }
 
 void loop() {
@@ -373,7 +333,13 @@ void loop() {
     break;
     case 8://dice mode
       dice();
-      if(key == "S"){state = 0;}
+      if(key == "L"){
+        state = 0;
+        diceFlag = 0;
+      }else if(key == "S"){
+        diceFlag = 1;  
+      }
+      
     break;
 
     default:
@@ -833,6 +799,16 @@ void scoreBoard(){
     matrix.drawChar(26, 0, strB.charAt(1), HIGH, LOW, 1);
     matrix.write();
 }
-void dice(){centerPrint("D C");}
+void dice(){
+  if(diceFlag){
+    int diceValue = random(1,7);
+    centerPrint(String(diceValue));
+    delay(5000);
+    diceFlag = 0;
+  }else{
+    centerPrint("SHAKE");
+  }
+  
+}
 
 

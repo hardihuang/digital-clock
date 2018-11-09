@@ -74,5 +74,5 @@ void setup() {
 // Loop and print the time every second.
 void loop() {
   printTime();
-  delay(1000);
+  delay(500);
 }
