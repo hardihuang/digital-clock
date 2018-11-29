@@ -175,15 +175,17 @@ static unsigned char*  menuArray[8] = {empty_bitmap, setClock_bitmap, setAlarm_b
 int timeData[3] = {8, 0, 0}; //hour,minute,second
 int alarmData[4] = {8, 0, 0, 1}; //hour,minute,second, on or off
 int stopWatchData[4] = {0, 0, 0, 0};
-int countDownData[6] = {0, 0, 5, 0, 0, 0}; //hour,minute,second,on or off,temp minute, temp second
+int countDownData[6] = {0, 25, 0, 0, 25, 0}; //hour,minute,second,on or off,temp minute, temp second
 int scoreBoardData[2] = {0, 0};
 
 //others
 int photocellReading;
 int brightness = 1; //1-15
 int diceFlag = 0;
-double countDownInterval;
-int countDownPast;
+double intervalSpeed;
+unsigned int pn;
+int row;
+int left;
 
 void setup() {
   Serial.begin(9600);
@@ -296,57 +298,58 @@ void loop() {
       setAlarm();
       break;
     case 5://count down mode
+      intervalSpeed = (countDownData[1]*60000+countDownData[2]*1000)/256.0;
       countDown();
       if(rotationState == 1){
-        state = 9;  
         selected = 0;
-        countDownData[4] = countDownData[1];
-        countDownData[5] = countDownData[2];
-        countDownData[3] = 0;
-      }
-      if (countDownData[3] < 2) { //normal display count
-        if (key == "L") {
-          state = 0;
-          selected = 0;
-          countDownData[4] = countDownData[1];
-          countDownData[5] = countDownData[2];
-          countDownData[3] = 0;
-        } else if (key == "R") {
-          if (countDownData[4] != countDownData[1] or countDownData[2] != countDownData[5]) {
+        countDownData[3] = 1;
+        
+      }else{
+        if (countDownData[3] < 2) { //normal display count
+          if (key == "L") {
+            state = 0;
+            selected = 0;
             countDownData[4] = countDownData[1];
             countDownData[5] = countDownData[2];
             countDownData[3] = 0;
-            countDownTimer = millis();
-          } else {
-            countDownData[3] = 2; //edit countdown
+          } else if (key == "R") {
+            if (countDownData[4] != countDownData[1] or countDownData[2] != countDownData[5]) {
+              countDownData[4] = countDownData[1];
+              countDownData[5] = countDownData[2];
+              countDownData[3] = 0;
+              countDownTimer = millis();
+            } else {
+              countDownData[3] = 2; //edit countdown
+              selected = 1;
+            }
+  
+          } else if (key == "S") {
+            if (countDownData[3] == 0) {
+              countDownData[3] = 1;
+              countDownTimer = millis();
+            } else if (countDownData[3] == 1) {
+              countDownData[3] = 0;
+            }
           }
-
-        } else if (key == "S") {
-          if (countDownData[3] == 0) {
-            countDownData[3] = 1;
-            countDownTimer = millis();
-          } else if (countDownData[3] == 1) {
-            countDownData[3] = 0;
+        } else if (countDownData[3] == 2) { //set countDown
+          if (key == "L") {
+            addMinusOne(0, countDownData);
+            countDownData[4] = countDownData[1];
+            countDownData[5] = countDownData[2];
+          } else if ( key == "R") {
+            addMinusOne(1, countDownData);
+            countDownData[4] = countDownData[1];
+            countDownData[5] = countDownData[2];
+          } else if ( key == "S") {
+            if (selected < 2) {
+              selected++;
+            } else if (selected == 2) {
+              selected = 1;
+              countDownData[3] = 0;
+            }
           }
         }
-      } else if (countDownData[3] == 2) { //set countDown
-        if (key == "L") {
-          addMinusOne(0, countDownData);
-          countDownData[4] = countDownData[1];
-          countDownData[5] = countDownData[2];
-        } else if ( key == "R") {
-          addMinusOne(1, countDownData);
-          countDownData[4] = countDownData[1];
-          countDownData[5] = countDownData[2];
-        } else if ( key == "S") {
-          if (selected < 2) {
-            selected++;
-          } else if (selected == 2) {
-            selected = 1;
-            countDownData[3] = 0;
-          }
-        }
-      }
+      }//rotation end
 
       break;
     case 6://stop watch mode
@@ -400,13 +403,6 @@ void loop() {
         diceFlag = 0;
       }else if(key == "S"){
         diceFlag = 1;  
-      }
-      
-      break;
-    case 9://countdown animation mode
-      countDownAnimation();
-      if(rotationState == 0){
-        state = 0;
       }
       
       break;
@@ -752,6 +748,18 @@ void alarmOn() {
 }
 void countDown() {
   matrix.fillScreen(LOW);
+  if(rotationState == 1){//animation mode
+    countDownData[3]=1;
+    pn = countDownData[4]*(60000/intervalSpeed) + countDownData[5]*(1000/intervalSpeed);//current pixel number
+    row = pn/8;
+    left = pn % 8;
+    if(row>0){
+      matrix.fillRect(0,0,row,8,1);  
+    }
+    if(left>0){
+      matrix.fillRect(row,0,1,left,1);  
+    }
+  }else{//digit mode
   String strMin = formateDigit(countDownData[4]);
   String strSec = formateDigit(countDownData[5]);
   //draw minutes 0-59
@@ -773,7 +781,8 @@ void countDown() {
     matrix.fillRect(15, 1, 2, 2, 1);
     matrix.fillRect(15, 5, 2, 2, 1);
   }
-
+  }//digit mode end
+  matrix.write();
   if (countDownData[3] == 1) {
     if (millis() - countDownTimer >= 1000) {
       if (countDownData[5] > 0) {
@@ -782,7 +791,8 @@ void countDown() {
         if (countDownData[4] > 0) {
           countDownData[4]--;
           countDownData[5] = 59;
-        } else { //time's up
+        }else{
+          //time's up  
           matrix.setIntensity(15);
           for (int i = 0; i < 3; i++) {
             matrix.fillScreen(HIGH);
@@ -809,7 +819,7 @@ void countDown() {
       countDownTimer = millis();
     }
   }
-  matrix.write();
+  
 }
 void stopWatch() {
   matrix.fillScreen(LOW);
@@ -865,53 +875,5 @@ void dice(){
   }else{
     centerPrint("SHAKE");
   }
-}
-
-void countDownAnimation(){
-  if(countDownData[3]==1){
-    countDownInterval = (countDownData[1]*60000+countDownData[2]*1000)/256.0;
-    countDownPast = (countDownData[4]*60000+countDownData[5]*1000)/countDownInterval;
-    matrix.fillScreen(LOW);
-    matrix.write();
-    for(int i=0;i<32;i++){
-      for(int k=7;k>=0;k--){
-        checkRotation();
-        if(rotationState==1){
-          matrix.drawPixel(i,k,1);
-          matrix.write();
-          delay(countDownInterval);
-        }else{
-          i = 32;
-          k = -1;  
-        }
-      }  
-    }
-  }else{
-    matrix.fillScreen(HIGH);
-    matrix.write();
-  }
- 
-  //time's up
-  matrix.setIntensity(15);
-  for (int i = 0; i < 3; i++) {
-    matrix.fillScreen(HIGH);
-    matrix.drawBitmap(12, 0,   menuArray[3], 8, 8, 0);
-    matrix.write();
-    tone(buzzPin, 415, 500);
-    delay(500);
-  
-    matrix.fillScreen(LOW);
-    matrix.drawBitmap(12, 0,   menuArray[3], 8, 8, 1);
-    matrix.write();
-    noTone(buzzPin);
-    delay(500);
-  }
-  matrix.fillScreen(LOW);
-  matrix.write();
-  matrix.setIntensity(brightness);
-  countDownData[4] = countDownData[1];
-  countDownData[5] = countDownData[2];
-  countDownData[3] = 0;
-  
 }
 
