@@ -1,8 +1,9 @@
 /*
-  Digital Clock V0.6.0
+  Digital Clock V0.7.0
   by Hardi Huang
 
   update log:
+    V0.7.0 Nov/30/2018 9:16 countDown Animation combined with countDown digit mode
     V0.6.0 Nov/9/2018 11:08 new pcb(v1.0.1)
     V0.5.3 Oct/21/2018 17:19 added countdown app
     V0.5.2 Oct/20/2018 19:26 added scoreboard app
@@ -175,7 +176,7 @@ static unsigned char*  menuArray[8] = {empty_bitmap, setClock_bitmap, setAlarm_b
 int timeData[3] = {8, 0, 0}; //hour,minute,second
 int alarmData[4] = {8, 0, 0, 1}; //hour,minute,second, on or off
 int stopWatchData[4] = {0, 0, 0, 0};
-int countDownData[6] = {0, 25, 0, 0, 25, 0}; //hour,minute,second,on or off,temp minute, temp second
+int countDownData[6] = {0, 0, 3, 0, 0, 3}; //hour|minute|second|on or off or edit|temp minute| temp second
 int scoreBoardData[2] = {0, 0};
 
 //others
@@ -213,7 +214,7 @@ void loop() {
           state = 1;
         }
       }else{//vertical
-        state = 9;//countdown animation 
+        state = 5;//countdown animation 
       }
       
       if (millis() - syncTimer >= 10000) {
@@ -302,8 +303,6 @@ void loop() {
       countDown();
       if(rotationState == 1){
         selected = 0;
-        countDownData[3] = 1;
-        
       }else{
         if (countDownData[3] < 2) { //normal display count
           if (key == "L") {
@@ -518,9 +517,10 @@ void greating() {
 }
 void checkRotation() {
   if (digitalRead(tiltSwitch)) {
-    rotationState = 1;
+    rotationState = 1;//tile left
   } else {
-    rotationState = 0;//tile left
+    rotationState = 0;
+    countDownData[0] = 0;
   }
   //Serial.print(digitalRead(tiltSwitch));
   //Serial.print("  ");
@@ -748,9 +748,9 @@ void alarmOn() {
 }
 void countDown() {
   matrix.fillScreen(LOW);
-  if(rotationState == 1){//animation mode
+  if(rotationState == 1 and countDownData[0] == 0){//animation mode
     countDownData[3]=1;
-    pn = countDownData[4]*(60000/intervalSpeed) + countDownData[5]*(1000/intervalSpeed);//current pixel number
+    pn = countDownData[4]*(60000/intervalSpeed) + countDownData[5]*(1000/intervalSpeed);//current pixel number, mind the order, change that might cause arithmetic overflow and get a negative number
     row = pn/8;
     left = pn % 8;
     if(row>0){
@@ -814,6 +814,7 @@ void countDown() {
           countDownData[4] = countDownData[1];
           countDownData[5] = countDownData[2];
           countDownData[3] = 0;
+          countDownData[0] = 1;//count down finished flag , goes to zero when user tilt the clock back to horizontal(in check rotation function), prevent endless cycle in animation mode coz it can auto start
         }
       }
       countDownTimer = millis();
