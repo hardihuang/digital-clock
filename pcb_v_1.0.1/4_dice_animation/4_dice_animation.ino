@@ -3,6 +3,7 @@
   by Hardi Huang
 
   update log:
+    V0.8.0 Nov/30/2018 20:22 added dice animation, sound effect and shake trigger
     V0.7.0 Nov/30/2018 9:16 countDown Animation combined with countDown digit mode
     V0.6.0 Nov/9/2018 11:08 new pcb(v1.0.1)
     V0.5.3 Oct/21/2018 17:19 added countdown app
@@ -187,6 +188,7 @@ double intervalSpeed;
 unsigned int pn;
 int row;
 int left;
+int diceValue;
 
 void setup() {
   Serial.begin(9600);
@@ -400,10 +402,9 @@ void loop() {
       if(key == "L"){
         state = 0;
         diceFlag = 0;
-      }else if(key == "S"){
-        diceFlag = 1;  
+      }else if(key == "S" || rotationState == 1){
+        diceFlag = 2;  
       }
-      
       break;
     default:
       break;
@@ -883,13 +884,67 @@ void scoreBoard() {
   matrix.write();
 }
 void dice(){
-  if(diceFlag){
-    int diceValue = random(1,7);
-    centerPrint(String(diceValue));
-    delay(1000);
-    diceFlag = 0;
-  }else{
+  if(diceFlag == 0){//first time, display message
     centerPrint("SHAKE");
+  }else if(diceFlag == 1){//display fixed value
+    displayDice(diceValue);
+  }else if(diceFlag == 2){//start shaking
+    for(int i=1;i<15;i++){
+      diceValue = random(1,7);
+      displayDice(diceValue);
+      tone(buzzPin, 400+30*i, 2);
+      /*
+      digitalWrite(buzzPin, HIGH);
+      delay(2);
+      digitalWrite(buzzPin, LOW);
+      */
+      delay(68);
+    }
+    diceFlag = 1;
   }
 }
 
+
+int displayDice(int diceValue){
+  matrix.fillScreen(LOW);
+  matrix.drawRect(12,1,1,5,1);
+  matrix.drawRect(20,1,1,5,1);
+  matrix.drawRect(13,0,7,1,1);
+  matrix.drawRect(13,6,7,1,1); 
+  switch(diceValue){
+    case 1:
+      matrix.drawPixel(16,3,1);
+    break;  
+    case 2:
+      matrix.drawPixel(17,2,1); 
+      matrix.drawPixel(15,4,1);
+    break;
+    case 3:
+      matrix.drawPixel(18,2,1);
+      matrix.drawPixel(16,3,1);
+      matrix.drawPixel(14,4,1);
+    break;
+    case 4:
+      matrix.drawPixel(14,2,1);
+      matrix.drawPixel(14,4,1);
+      matrix.drawPixel(18,2,1);
+      matrix.drawPixel(18,4,1);
+    break;
+    case 5:
+      matrix.drawPixel(14,2,1);
+      matrix.drawPixel(14,4,1);
+      matrix.drawPixel(18,2,1);
+      matrix.drawPixel(18,4,1);
+      matrix.drawPixel(16,3,1);
+    break;
+    case 6:
+      matrix.drawPixel(14,2,1);
+      matrix.drawPixel(14,4,1);
+      matrix.drawPixel(18,2,1);
+      matrix.drawPixel(18,4,1);
+      matrix.drawPixel(16,2,1);
+      matrix.drawPixel(16,4,1);
+    break;
+  }  
+  matrix.write();
+}
