@@ -3,6 +3,7 @@
   by Hardi Huang
 
   update log:
+    V0.8.1 Dec/1/2018 19:02 saved the countdown data to eeprom
     V0.8.0 Nov/30/2018 20:22 added dice animation, sound effect and shake trigger
     V0.7.0 Nov/30/2018 9:16 countDown Animation combined with countDown digit mode
     V0.6.0 Nov/9/2018 11:08 new pcb(v1.0.1)
@@ -191,12 +192,16 @@ int left;
 int diceValue;
 
 void setup() {
+  //first time upload run these first!!!
+  //writeAlarmData();
+  //writeCountDownData();
+  
   Serial.begin(9600);
   displaySetup();
   pinSetup();
   rtcSetup();
-  //writeAlarmData();
   fetchAlarmData();
+  fetchCountDownData();
   getTime();
   //greating();
   
@@ -347,7 +352,9 @@ void loop() {
             } else if (selected == 2) {
               selected = 1;
               countDownData[3] = 0;
+              
             }
+            writeCountDownData();
           }
         }
       }//rotation end
@@ -564,6 +571,17 @@ void writeAlarmData() {
 void fetchAlarmData() {
   for (int i = 0; i < 3; i++) {
     alarmData[i] = EEPROM.read(i);
+  }
+}
+
+void writeCountDownData() {
+  for (int i = 3; i < 5; i++) {
+    EEPROM.write(i, countDownData[i-2]);
+  }
+}
+void fetchCountDownData() {
+  for (int i = 3; i < 5; i++) {
+    countDownData[i-2] = EEPROM.read(i);
   }
 }
 void getTime() {
