@@ -7,12 +7,14 @@ int numberOfHorizontalDisplays = 4;
 int numberOfVerticalDisplays = 1;
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
 
-int countDownData[6]={0,59,0,1,59,0};//hour,minute,second
+int countDownData[6]={0,59,59,0,59,59};//hour,minute,second
 double intervalSpeed;
 unsigned long timer = millis();
 int realTime;
 int countDownPast;
 unsigned int pn;
+unsigned int temp1;
+unsigned int temp2;
 int row;
 int left;
 
@@ -25,25 +27,22 @@ void setup() {
   matrix.setRotation(3, 1);
   matrix.fillScreen(LOW); // show black
   matrix.write();
-  intervalSpeed = (countDownData[1]*60000+countDownData[2]*1000)/256.0;
+  intervalSpeed = countDownData[1]*(60000/256.0)+countDownData[2]*(1000/256.0);
 }
 
 void loop() {
-  Serial.print("interval speed: ");
-  Serial.print(intervalSpeed); 
-  Serial.print("|| minute: ");
-  Serial.print(countDownData[4]);
-  Serial.print("|| second: ");
-  Serial.print(countDownData[5]);
-  
-  pn = countDownData[4]*(60000/intervalSpeed) + countDownData[5]*(1000/intervalSpeed);//current pixel number
-  Serial.print("|| pixel number: ");
-  Serial.println(pn); 
+  temp1=countDownData[4]*(60000/intervalSpeed);
+  temp2=countDownData[5]*(1000/intervalSpeed);
+  pn = temp1 + temp2;//current pixel number
   row = pn/8;
   left = pn % 8;
-/*
-  Serial.print("interval speed: ");
+
+  Serial.print("|| interval speed: ");
   Serial.print(intervalSpeed); 
+  Serial.print("|| temp1: ");
+  Serial.print(temp1); 
+  Serial.print("|| temp2: ");
+  Serial.print(temp2); 
   Serial.print("|| pixel number: ");
   Serial.print(pn); 
   Serial.print("|| Row: ");
@@ -54,7 +53,7 @@ void loop() {
   Serial.print(countDownData[4]);
   Serial.print("|| second: ");
   Serial.println(countDownData[5]);
-*/
+
   matrix.fillScreen(LOW);
   if(row>0){
     matrix.fillRect(0,0,row,8,1);  
@@ -76,5 +75,5 @@ void loop() {
     }
     timer = millis();
   }
-  delay(100);
+  delay(500);
 }

@@ -301,7 +301,7 @@ void loop() {
       setAlarm();
       break;
     case 5://count down mode
-      intervalSpeed = (countDownData[1]*60000+countDownData[2]*1000)/256.0;
+      intervalSpeed = countDownData[1]*(60000/256.0)+countDownData[2]*(1000/256.0);
       countDown();
       if(rotationState == 1){
         selected = 0;
