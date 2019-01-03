@@ -196,14 +196,14 @@ void setup() {
   //writeAlarmData();
   //writeCountDownData();
   
-  Serial.begin(9600);
+  //Serial.begin(9600);
   displaySetup();
   pinSetup();
   rtcSetup();
   fetchAlarmData();
   fetchCountDownData();
   getTime();
-  //greating();
+  greating();
   
 }
 
@@ -628,7 +628,7 @@ void addMinusOne(int operation, int arr[]) {
     case 1:
       if (arr[selected] < upperLimit) {
         arr[selected]++;
-      } else if (arr[selected] == upperLimit) {
+      } else if (arr[selected] >= upperLimit) {
         arr[selected] = lowerLimit;
       }
       break;
