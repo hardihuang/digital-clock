@@ -9,7 +9,9 @@
 ================================================================================
 
 最新固件（V1.0.1）下载： https://github.com/hardihuang/digital-clock/blob/master/final/V1.0.1-firmware/V1.0.1-firmware.ino
+
 产品使用说明: http://hardihuang.info/blog/digital-clock-user-guide/
+
 获取更多信息，请访问: http://hardihuang.info/blog/category/maker/
 
 
