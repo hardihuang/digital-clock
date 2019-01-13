@@ -1,5 +1,5 @@
 # digital-clock 
----
+
 
 ================================================================================
  
@@ -14,7 +14,11 @@
 Greetings! Thank you for choosing our product!
 
 For more information and resources, please visit my website: www.hardihuang.info
+
 Email me (hardihuang@outlook.com) if you have any question.
+
+## Buy: [点阵屏闹钟卧室书桌学生学习工作用闹钟创意倒计时番茄时钟]([点阵屏闹钟卧室书桌学生学习工作用闹钟创意倒计时番茄时钟](http://jianshu.com))
+
 
 ## 
 
