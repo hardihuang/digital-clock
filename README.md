@@ -13,6 +13,8 @@
   
 Greetings! Thank you for choosing our product!
 
+User menu: http://hardihuang.info/blog/digital-clock-user-guide/
+
 For more information and resources, please visit my website: http://hardihuang.info/blog/category/maker/
 
 Email me (hardihuang@outlook.com) if you have any question.
