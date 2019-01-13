@@ -16,8 +16,7 @@ Greetings! Thank you for choosing our product!
 For more information and resources, please visit my website: www.hardihuang.info
 Email me (hardihuang@outlook.com) if you have any question.
 
-
-### 更多信息请访问：[Hardi Huang的博客](http://hardihuang.info/blog/category/maker/ "Hardi Huang的博客")
+## 
 
 ![图片alt](https://github.com/hardihuang/digital-clock/blob/master/asset/IMG_7437.jpg?raw=true)
 ![图片alt](https://github.com/hardihuang/digital-clock/blob/master/asset/IMG_7451.jpg?raw=true)
