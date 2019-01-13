@@ -13,10 +13,10 @@
   
 Greetings! Thank you for choosing our product!
 
-For more information and resources, please visit my website: www.hardihuang.info
+For more information and resources, please visit my website: http://hardihuang.info/blog/category/maker/
 
 Email me (hardihuang@outlook.com) if you have any question.
-## Buy:  [点阵屏闹钟卧室书桌学生学习工作用闹钟创意倒计时番茄时钟](https://item.taobao.com/item.htm?spm=a1z09.2.0.0.229b2e8dtlRdKD&id=583316993089&_u=dc8ls7uf21e)
+## 淘宝链接:  [点阵屏闹钟卧室书桌学生学习工作用闹钟创意倒计时番茄时钟](https://item.taobao.com/item.htm?spm=a1z09.2.0.0.229b2e8dtlRdKD&id=583316993089&_u=dc8ls7uf21e)
 
 
 ## 
