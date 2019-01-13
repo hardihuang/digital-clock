@@ -9,7 +9,7 @@
 
 ================================================================================
   
-Greetings! Thank you for choosing our product！
+Greetings! Thank you for choosing our product!
 
 For more information and resources, please visit my website: www.hardihuang.info
 Email me (hardihuang@outlook.com) if you have any question.
