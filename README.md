@@ -15,8 +15,6 @@
 获取更多信息，请访问: http://hardihuang.info/blog/category/maker/
 
 
-## 淘宝链接:  [点阵屏闹钟卧室书桌学生学习工作用闹钟创意倒计时番茄时钟](https://item.taobao.com/item.htm?spm=a1z09.2.0.0.229b2e8dtlRdKD&id=583316993089&_u=dc8ls7uf21e)
-
 
 ## 
 
